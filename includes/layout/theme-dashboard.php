@@ -11,6 +11,7 @@ $isHrtdms = $activeApp === 'hrtdms';
 $isDmis = $activeApp === 'dmis';
 $isRace = $activeApp === 'race';
 $isDtr = $activeApp === 'dtr';
+$isIms = $activeApp === 'ims';
 
 require_once(root() . '/includes/layout/components.php');
 ?>

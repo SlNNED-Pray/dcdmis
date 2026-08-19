@@ -169,7 +169,7 @@ if (function_exists('verify_csrf_token')) {
     verify_csrf_token();
 }
 
-$modules = ['hrmis', 'dts', 'pis', 'race', 'hrtdms', 'dmis', 'dtr', 'monitoring_tools', 'system_overview'];
+$modules = ['hrmis', 'dts', 'pis', 'race', 'hrtdms', 'dmis', 'dtr', 'ims', 'monitoring_tools', 'system_overview'];
 
 foreach ($modules as $area) {
     if (!isset($_SESSION["{$prefix}data_privacy_agreed_{$area}"])) {

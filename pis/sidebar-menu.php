@@ -10,6 +10,7 @@ sidebarMenuItem(customUri('pis', 'Service Record', $userId), 'Service Record', '
 sidebarMenuItem(customUri('pis', '201 Files', $userId), '201 Files', 'fa-folder-open', isset($url) && str_contains($url, '201 Files'));
 sidebarMenuItem(customUri('pis', 'Trainings', $userId), 'Trainings', 'fa-chalkboard-teacher', isset($url) && str_contains($url, 'Trainings'));
 sidebarMenuItem(customUri('pis', 'Payslips', $userId), 'Payslips', 'fa-money-check', isset($url) && str_contains($url, 'Payslips'));
+sidebarMenuItem(customUri('pis', 'Purchase Requests'), 'Purchase Requests', 'fa-shopping-cart', isset($url) && str_contains($url, 'Purchase Request'));
 if (!$isNonDivision) {
     sidebarMenuItem(customUri('pis', 'IPCRF', $userId), 'IPCRF', 'fa-chart-line', isset($url) && (str_contains($url, 'IPCRF') || str_contains($url, 'Performance') || str_contains($url, 'Phase') || str_contains($url, 'Objective') || str_contains($url, 'MOV')));
 }

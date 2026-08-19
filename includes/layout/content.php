@@ -78,6 +78,21 @@ if (!isset($url) || $url === 'dashboard') {
         case 'Payslips':
             $file = 'payslip/page';
             break;
+        case 'Purchase Requests':
+            $file = root() . '/pis/ims/index.php';
+            break;
+        case 'New Purchase Request':
+            $file = root() . '/pis/ims/create.php';
+            break;
+        case 'View Purchase Request':
+            $file = root() . '/pis/ims/view.php';
+            break;
+        case 'Mark Purchase Request Arrived':
+            $file = root() . '/pis/ims/mark_arrived.php';
+            break;
+        case 'Purchase Order':
+            $file = root() . '/pis/ims/po_report.php';
+            break;
         case 'Request Transfer':
             $file = 'transfer-request/page';
             break;

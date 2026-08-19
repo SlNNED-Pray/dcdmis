@@ -12,7 +12,7 @@ require_once(root() . '/includes/string.php');
 
 $employeeId = isset($_GET['id']) ? sanitize(decipher($_GET['id'])) : null;
 $employee = employee((int) $employeeId);
-$dtsUser = $hrmisUser = $dmisUser = $hrtdmsUser = $dtsDivisionUser = false;
+$dtsUser = $hrmisUser = $dmisUser = $hrtdmsUser = $imsUser = $dtrUser = $raceUser = $dtsDivisionUser = false;
 $stationId = $depedEmail = $dtsUserStation = '';
 $modalTitle = 'User not found';
 $hasUser = false;
@@ -44,6 +44,7 @@ if ($employee) {
     $dmisUser = (bool) userRole($employeeId, 'dmis');
     $hrtdmsUser = (bool) userRole($employeeId, 'hrtdms');
     $raceUser = (bool) userRole($employeeId, 'race');
+    $imsUser = (bool) userRole($employeeId, 'ims');
     $dtrUser = (bool) userRole($employeeId, 'dtr');
 }
 ?>
@@ -123,6 +124,14 @@ if ($employee) {
                             <input class="form-check-input" id="dtr" type="checkbox" name="dtr"
                                 <?= setActiveItem($dtrUser, true, 'checked') ?>>
                             <label class="form-check-label" for="dtr">Daily Time Record</label>
+                        </div>
+                    </div>
+
+                    <div class="form-group mt-2 mb-0">
+                        <div class="form-check">
+                            <input class="form-check-input" id="ims" type="checkbox" name="ims"
+                                <?= setActiveItem($imsUser, true, 'checked') ?>>
+                            <label class="form-check-label" for="ims">Inventory Management System</label>
                         </div>
                     </div>
 
