@@ -38,7 +38,7 @@ $selectedType = isset($_GET['type']) ? sanitize($_GET['type']) : '';
     </div>
 
     <div class="card-body">
-        <?php require(root() . '/includes/employee-filter-bar.php'); ?>
+        <?php require(root() . '/modules/employees/employee-filter-bar.php'); ?>
 
         <div class="table-responsive">
             <table class="table table-hover mb-0 text-center" id="data-table" width="100%" cellspacing="0">
@@ -63,7 +63,8 @@ $selectedType = isset($_GET['type']) ? sanitize($_GET['type']) : '';
                         $stnData = schoolById($row['station_id']);
                         $stn = $stnData['name'] ?? null;
                         ?>
-                        <tr class="text-uppercase" data-gender="<?= e($row['sex']) ?>" data-position-id="<?= e($row['position_id']) ?>" data-station-id="<?= e($row['station_id']) ?>">
+                        <tr class="text-uppercase" data-gender="<?= e($row['sex']) ?>"
+                            data-position-id="<?= e($row['position_id']) ?>" data-station-id="<?= e($row['station_id']) ?>">
                             <td class="align-middle">
                                 <div class="image-container">
                                     <span

@@ -150,7 +150,7 @@ if ($school) {
             </div>
         </div>
 
-        <?php require(root() . '/includes/employee-filter-bar.php'); ?>
+        <?php require(root() . '/modules/employees/employee-filter-bar.php'); ?>
 
         <div class="table-responsive mt-3">
             <table class="table table-hover mb-0 text-center" id="data-table" width="100%" cellspacing="0">

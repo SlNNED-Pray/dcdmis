@@ -158,14 +158,13 @@ function activeEmployeesWithPosition($stationId = null, $category = null)
         $params[] = $stationId;
     }
     if ($category !== null && $category !== '') {
-        if ($category === 'Related-Teaching') {
-            $conditions[] = "(pos.`category` = ? OR pos.`category` = ? OR pos.`id` IN ('PDO1', 'PDO2'))";
-            $params[] = 'Related-Teaching';
-            $params[] = 'Teaching';
-        } else {
+        // if ($category === 'Related-Teaching') {
+        //     $conditions[] = "(pos.`category` = ? OR pos.`id` IN ('PDO1', 'PDO2'))";
+        //     $params[] = 'Related-Teaching';
+        // } else {
             $conditions[] = "pos.`category` = ?";
             $params[] = $category;
-        }
+        // }
     }
     if (!empty($conditions)) {
         $sql .= " WHERE " . implode(' AND ', $conditions);
@@ -305,7 +304,7 @@ function activeSupervisorEmployees()
     return is_array($results) ? $results : [];
 }
 
-function activeGuidanceCounselorEmployees($stationId = null, $districtId = null)
+function activeRelatedTeachingEmployees($stationId = null, $districtId = null)
 {
     $sql = "SELECT p.`id` AS `employee_id`, p.`last_name`, p.`first_name`, p.`middle_name`, p.`name_extension`,
                 pos.`official_title`, pos.`category` AS `position_category`,
@@ -1125,4 +1124,149 @@ function revertWinner($schedule_id, $award_id, $level = null)
         );
     }
     return true;
+}
+
+
+// ============================================================
+// RACE ANALYTICS
+// ============================================================
+
+function raceAnalyticsFilters($year = null, $categoryId = null, $stationId = null, $employeeName = null)
+{
+    $joins = "FROM `awards_categories_nominees` AS n
+              INNER JOIN `employees` AS e ON n.`nominee_id` = e.`id` AND n.`nominee_type` = 'Employee'
+              INNER JOIN `award_schedule` AS sc ON n.`schedule_id` = sc.`id`
+              LEFT JOIN `recognition_awards` AS aw ON n.`award_id` = aw.`id`
+              LEFT JOIN `recognition_categories` AS cat ON aw.`category_id` = cat.`id`
+              LEFT JOIN (
+                  SELECT sa1.employee_id, sa1.station_id, sa1.position_id
+                  FROM station_assignments sa1
+                  WHERE sa1.created_at = (
+                      SELECT MAX(sa2.created_at) FROM station_assignments sa2 WHERE sa2.employee_id = sa1.employee_id
+                  )
+              ) AS s ON e.`id` = s.`employee_id`
+              LEFT JOIN `schools` AS sch ON s.`station_id` = sch.`id`
+              LEFT JOIN `positions` AS pos ON s.`position_id` = pos.`id`";
+
+    $conditions = ["n.`status` = 'Awarded'"];
+    $params = [];
+
+    if ($year !== null && $year !== '') {
+        $conditions[] = "YEAR(sc.`date`) = ?";
+        $params[] = $year;
+    }
+    if ($categoryId !== null && $categoryId !== '') {
+        $conditions[] = "aw.`category_id` = ?";
+        $params[] = $categoryId;
+    }
+    if ($stationId !== null && $stationId !== '') {
+        $conditions[] = "s.`station_id` = ?";
+        $params[] = $stationId;
+    }
+    if ($employeeName !== null && $employeeName !== '') {
+        $conditions[] = "(e.`last_name` LIKE ? OR e.`first_name` LIKE ? OR CONCAT(e.`first_name`, ' ', e.`last_name`) LIKE ?)";
+        $like = '%' . $employeeName . '%';
+        $params[] = $like;
+        $params[] = $like;
+        $params[] = $like;
+    }
+
+    return [
+        'joins' => $joins,
+        'where' => ' WHERE ' . implode(' AND ', $conditions),
+        'params' => $params,
+    ];
+}
+
+function raceAwardsByYear($categoryId = null, $stationId = null, $employeeName = null)
+{
+    $f = raceAnalyticsFilters(null, $categoryId, $stationId, $employeeName);
+    $sql = "SELECT YEAR(sc.`date`) AS `name`, COUNT(n.`id`) AS `count`
+            {$f['joins']}{$f['where']}
+            GROUP BY YEAR(sc.`date`)
+            ORDER BY YEAR(sc.`date`) ASC";
+    $results = query($sql, $f['params']);
+    return is_array($results) ? $results : [];
+}
+
+function raceAwardeesBySex($year = null, $categoryId = null, $stationId = null, $employeeName = null)
+{
+    $f = raceAnalyticsFilters($year, $categoryId, $stationId, $employeeName);
+    $sql = "SELECT e.`sex` AS `name`, COUNT(n.`id`) AS `count`
+            {$f['joins']}{$f['where']}
+            GROUP BY e.`sex`
+            ORDER BY e.`sex` ASC";
+    $results = query($sql, $f['params']);
+    return is_array($results) ? $results : [];
+}
+
+function raceAwardeesByGeneration($year = null, $categoryId = null, $stationId = null, $employeeName = null)
+{
+    $f = raceAnalyticsFilters($year, $categoryId, $stationId, $employeeName);
+    $sql = "SELECT
+                CASE
+                    WHEN YEAR(e.`birthdate`) BETWEEN 1946 AND 1964 THEN 'Baby Boomers'
+                    WHEN YEAR(e.`birthdate`) BETWEEN 1965 AND 1980 THEN 'Generation X'
+                    WHEN YEAR(e.`birthdate`) BETWEEN 1981 AND 1996 THEN 'Millennials'
+                    WHEN YEAR(e.`birthdate`) BETWEEN 1997 AND 2012 THEN 'Generation Z'
+                    WHEN YEAR(e.`birthdate`) >= 2013 THEN 'Generation Alpha'
+                    ELSE 'Not Specified'
+                END AS `name`,
+                COUNT(n.`id`) AS `count`
+            {$f['joins']}{$f['where']}
+            GROUP BY `name`
+            ORDER BY MIN(e.`birthdate`) ASC";
+    $results = query($sql, $f['params']);
+    return is_array($results) ? $results : [];
+}
+
+function raceAwardsByCategory($year = null, $stationId = null, $employeeName = null)
+{
+    $f = raceAnalyticsFilters($year, null, $stationId, $employeeName);
+    $sql = "SELECT COALESCE(cat.`name`, 'Uncategorized') AS `name`, COUNT(n.`id`) AS `count`
+            {$f['joins']}{$f['where']}
+            GROUP BY cat.`id`, cat.`name`
+            ORDER BY `count` DESC";
+    $results = query($sql, $f['params']);
+    return is_array($results) ? $results : [];
+}
+
+function raceTopAwardees($year = null, $categoryId = null, $stationId = null, $employeeName = null, $limit = 10)
+{
+    $f = raceAnalyticsFilters($year, $categoryId, $stationId, $employeeName);
+    $sql = "SELECT e.`id` AS `employee_id`, e.`last_name`, e.`first_name`, e.`middle_name`, e.`name_extension`,
+                   e.`sex`, e.`birthdate`,
+                   sch.`name` AS `school_name`, pos.`official_title` AS `position`,
+                   COUNT(n.`id`) AS `award_count`
+            {$f['joins']}{$f['where']}
+            GROUP BY e.`id`
+            ORDER BY `award_count` DESC, e.`last_name` ASC
+            LIMIT " . (int) $limit;
+    $results = query($sql, $f['params']);
+    return is_array($results) ? $results : [];
+}
+
+function raceAwardYears()
+{
+    $sql = "SELECT DISTINCT YEAR(sc.`date`) AS `year`
+            FROM `awards_categories_nominees` AS n
+            INNER JOIN `award_schedule` AS sc ON n.`schedule_id` = sc.`id`
+            WHERE n.`status` = 'Awarded'
+            ORDER BY `year` DESC";
+    $results = query($sql);
+    return is_array($results) ? $results : [];
+}
+
+function raceGenerationLabel($birthdate)
+{
+    if (empty($birthdate) || $birthdate === '0000-00-00') {
+        return 'Not Specified';
+    }
+    $year = (int) date('Y', strtotime($birthdate));
+    if ($year >= 1946 && $year <= 1964) return 'Baby Boomers';
+    if ($year >= 1965 && $year <= 1980) return 'Generation X';
+    if ($year >= 1981 && $year <= 1996) return 'Millennials';
+    if ($year >= 1997 && $year <= 2012) return 'Generation Z';
+    if ($year >= 2013) return 'Generation Alpha';
+    return 'Not Specified';
 }

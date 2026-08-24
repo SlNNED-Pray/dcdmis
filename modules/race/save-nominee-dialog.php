@@ -236,11 +236,11 @@ $typeSwitchParams = $_GET;
                         $employees = activeSupervisorEmployees();
                     } elseif ($filterCategory === 'Related-Teaching') {
                         if ($isPrincipalUser && $mySchool) {
-                            $guidanceCounselors = activeGuidanceCounselorEmployees($mySchool['id']);
+                            $guidanceCounselors = activeRelatedTeachingEmployees($mySchool['id']);
                         } elseif ($isDistSupervisor && $myDistrict) {
-                            $guidanceCounselors = activeGuidanceCounselorEmployees(null, $myDistrict['id']);
+                            $guidanceCounselors = activeRelatedTeachingEmployees(null, $myDistrict['id']);
                         } else {
-                            $guidanceCounselors = activeGuidanceCounselorEmployees();
+                            $guidanceCounselors = activeRelatedTeachingEmployees();
                         }
 
                         $combined = [];
