@@ -78,20 +78,53 @@ if (!isset($url) || $url === 'dashboard') {
         case 'Payslips':
             $file = 'payslip/page';
             break;
+        case 'Stock and Inventory':
+            $file = root() . '/ims/inventory.php';
+            break;
+        case 'Create Stock Item':
+            $file = root() . '/ims/item-create.php';
+            break;
+        case 'Edit Stock Item':
+            $file = root() . '/ims/item-edit.php';
+            break;
+        case 'Requisition Slips':
+            $file = root() . '/ims/ris.php';
+            break;
+        case 'Disapproved RIS':
+            $file = root() . '/ims/ris-disapproved.php';
+            break;
+        case 'Create RIS':
+            $file = root() . '/ims/ris-create.php';
+            break;
+        case 'IAR':
+            $file = root() . '/ims/iar.php';
+            break;
+        case 'Create IAR':
+            $file = root() . '/ims/iar-create.php';
+            break;
         case 'Purchase Requests':
-            $file = root() . '/pis/ims/index.php';
+            $file = root() . '/ims/pr.php';
             break;
-        case 'New Purchase Request':
-            $file = root() . '/pis/ims/create.php';
+        case 'Create Purchase Request':
+            $file = root() . '/ims/pr-create.php';
             break;
-        case 'View Purchase Request':
-            $file = root() . '/pis/ims/view.php';
+        case 'Stock Card':
+            $file = root() . '/ims/stock-card.php';
             break;
-        case 'Mark Purchase Request Arrived':
-            $file = root() . '/pis/ims/mark_arrived.php';
+        case 'Inventory Custodian Slip':
+            $file = root() . '/ims/ics-report.php';
+            break;
+        case 'Issued ICS':
+            $file = root() . '/ims/ics-issued.php';
+            break;
+        case 'Physical Count':
+            $file = root() . '/ims/physical-count.php';
+            break;
+        case 'Price History':
+            $file = root() . '/ims/price-history.php';
             break;
         case 'Purchase Order':
-            $file = root() . '/pis/ims/po_report.php';
+            $file = root() . '/ims/po.php';
             break;
         case 'Request Transfer':
             $file = 'transfer-request/page';
@@ -333,5 +366,9 @@ if (!isset($url) || $url === 'dashboard') {
             break;
     }
 
-    require_once(root() . "/modules/{$file}.php");
+    require_once(
+        str_starts_with($file, '/') || preg_match('/^[A-Za-z]:[\\\\\/]/', $file)
+            ? $file
+            : root() . "/modules/{$file}.php"
+    );
 }
