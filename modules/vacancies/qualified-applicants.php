@@ -91,8 +91,15 @@ $qualifiedApps = array_filter($apps, function ($app) {
                         foreach ($qualifiedApps as $app): ?>
                             <tr class="text-uppercase">
                                 <td class="align-middle"><?= toDatetime($app['created_at']) ?></td>
-                                <td class="align-middle">
-                                    <?= applicantName($app['application_code']) ?>
+                                <td class="align-middle font-weight-bold">
+                                    <?php
+                                    $applicantId = $app['application_code_id'] ?? applicantId($app['application_code']);
+                                    $applicantNameStr = applicantName($app['application_code']);
+                                    if ($applicantId): ?>
+                                        <a href="<?= e(customUri('hrmis', 'Applicant Information', $applicantId)) ?>"><?= e($applicantNameStr) ?></a>
+                                    <?php else: ?>
+                                        <?= e($applicantNameStr) ?>
+                                    <?php endif; ?>
                                 </td>
                                 <td class="align-middle">
                                     <div><?= e($app['official_title']) ?></div>

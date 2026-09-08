@@ -76,8 +76,13 @@ $countScheduled = number_format(count(scheduledTrainings()));
                 <div class="chart-bar h-auto">
                     <canvas id="trained-employees-bar-chart"></canvas>
                     <script>
-                        <?php $trainedEmployeesByYear = trainedEmployeesByYear(); ?>
-                        generateBarChart(<?= json_encode($trainedEmployeesByYear) ?>, generateColorPallete(<?= count($trainedEmployeesByYear) ?>), 'trained-employees-bar-chart', false);
+                        <?php
+                        $trainedEmployeesByYear = array_map(function ($item) {
+                            $item['link'] = customUri('pis', 'Trained Employees') . '&year=' . $item['name'];
+                            return $item;
+                        }, trainedEmployeesByYear());
+                        ?>
+                        generateBarChart(<?= json_encode($trainedEmployeesByYear) ?>, generateColorPallete(<?= count($trainedEmployeesByYear) ?>), 'trained-employees-bar-chart');
                     </script>
                 </div>
             </div>

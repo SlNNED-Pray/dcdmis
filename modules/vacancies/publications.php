@@ -38,7 +38,7 @@ messageAlert($showAlert, $message, $success);
 <div class="card border-left-primary shadow mb-4">
     <div class="card-header py-3">
         <?php
-        if ($isHrmis && $isPersonnel) {
+        if ($isHrmis && ($isICT || $isPersonnel)) {
             contentTitleWithLink('Call for Applications', customUri('hrmis', 'Create Call for Application'), 'Add', 'fa-plus');
         } else {
             contentTitle('Call for Applications');

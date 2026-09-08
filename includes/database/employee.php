@@ -846,3 +846,18 @@ function nonRegularEmployees($employment_type = null, $station_id = null)
     return is_array($results) ? $results : [];
 }
 
+function employeeStepIncrement()
+{
+    $sql = "SELECT e.`id`, e.`lname`, e.`fname`, e.`mname`, e.`ext`, e.`picture`, e.`sex`,
+                   sa.`position_id` AS `position`, sa.`station_id` AS `station`,
+                   pos.`salary_grade` AS `sg`,
+                   COALESCE(si.`step`, 1) AS `step`,
+                   COALESCE(si.`last_step_date`, sa.`assignment_date`, '2020-01-01') AS `last_step_date`
+            FROM `employees` AS e
+            INNER JOIN `station_assignments` AS sa ON sa.`employee_id` = e.`id`
+            INNER JOIN `positions` AS pos ON pos.`id` = sa.`position_id`
+            LEFT JOIN `step_increments` AS si ON si.`employee_id` = e.`id`
+            WHERE e.`status` = 'Active'
+            ORDER BY e.`lname` ASC, e.`fname` ASC";
+    return query($sql);
+}

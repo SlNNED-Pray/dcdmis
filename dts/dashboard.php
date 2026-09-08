@@ -21,7 +21,7 @@ contentTitleWithModal('Dashboard', uri() . '/modules/documents/save-document-dia
 	?>
 </div>
 
-<?php if ($isRecordsPortal || $isAdminPortal): ?>
+<?php if (false): ?>
 	<script src="<?= uri() ?>/assets/vendor/chart.js/Chart.min.js"></script>
 	<script src="<?= uri() ?>/assets/vendor/chart.js/chartjs-plugin-datalabels.min.js"></script>
 	<script src="<?= uri() ?>/assets/js/chart-custom.js?v=<?= VERSION ?>"></script>

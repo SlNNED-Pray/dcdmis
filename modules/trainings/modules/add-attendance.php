@@ -118,7 +118,7 @@ messageAlert($showAlert, $message, $success);
                     $functional_division = $training['functional_division_id'];
                     $functional_divisions = functionalDivision($functional_division);
                     $training_functional_division = '';
-                    if (count($functional_divisions) > 0) {
+                    if ($functional_divisions && count($functional_divisions) > 0) {
                         $training_functional_division = $functional_divisions['name'];
                     }
                     $functional_division = (!empty($functional_division) && strtolower($functional_division) !== 'n/a') ? " ($training_functional_division)" : '';
@@ -240,7 +240,8 @@ messageAlert($showAlert, $message, $success);
                                         <?php endif; ?>
                                     </td>
 
-                                   <td class="align-middle text-left <?= ($trainingAttendance['status'] == 0) ? 'text-warning' : '' ?>">
+                                    <td
+                                        class="align-middle text-left <?= ($trainingAttendance['status'] == 0) ? 'text-warning' : '' ?>">
                                         <b><?= strtoupper($trainingAttendance['fullname']) ?></b>
                                     </td>
 
@@ -303,6 +304,7 @@ messageAlert($showAlert, $message, $success);
         box-shadow: 0 6px 18px rgba(0, 0, 0, 0.1);
         z-index: 9999;
     }
+
     .ui-helper-hidden-accessible {
         position: absolute !important;
         left: -9999px !important;

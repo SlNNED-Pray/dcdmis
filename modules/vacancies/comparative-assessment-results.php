@@ -258,7 +258,13 @@ messageAlert($showAlert, $message, $success);
                                             <tr class="text-uppercase">
                                                 <td class="align-middle font-weight-bold"><?= $ranks[$index] ?></td>
                                                 <td class="align-middle text-left font-weight-bold">
-                                                    <?= e($applicantName) ?>
+                                                    <?php
+                                                    $applicantId = $res['application_code_id'] ?? applicantId($res['application_code']);
+                                                    if ($applicantId): ?>
+                                                        <a href="<?= e(customUri('hrmis', 'Applicant Information', $applicantId)) ?>"><?= e($applicantName) ?></a>
+                                                    <?php else: ?>
+                                                        <?= e($applicantName) ?>
+                                                    <?php endif; ?>
                                                     <div class="text-muted font-weight-normal small">
                                                         <?= e($res['application_code']) ?>
                                                     </div>

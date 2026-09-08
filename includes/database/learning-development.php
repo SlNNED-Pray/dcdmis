@@ -209,6 +209,31 @@ function trainedEmployeesByYear($limit = null)
     return query($sql);
 }
 
+function trainedEmployeesForYear($year = null)
+{
+    $params = [];
+    $where = "WHERE t.`end_date` IS NOT NULL";
+    if ($year !== null && $year !== '' && strtolower((string)$year) !== 'all') {
+        $where .= " AND YEAR(t.`end_date`) = ?";
+        $params[] = (int) $year;
+    }
+
+    $sql = "SELECT p.`id`, p.`last_name`, p.`first_name`, p.`middle_name`, p.`name_extension`, 
+                   p.`sex`, p.`birthdate`, p.`agency_id`, p.`profile_picture`, p.`email_address`, p.`status`,
+                   s.`position_id`, s.`station_id`,
+                   COUNT(DISTINCT tp.`training_id`) AS `training_count` 
+            FROM `employees` AS p
+            INNER JOIN `training_attendees` AS tp ON p.`id` = tp.`employee_id`
+            INNER JOIN `trainings` AS t ON tp.`training_id` = t.`id`
+            LEFT JOIN `station_assignments` AS s ON p.`id` = s.`employee_id`
+            {$where}
+            GROUP BY p.`id` 
+            ORDER BY `training_count` DESC, p.`last_name` ASC, p.`first_name` ASC";
+
+    $results = query($sql, $params);
+    return is_array($results) ? $results : [];
+}
+
 function getPrograms()
 {
     $sql = "SELECT * FROM `programs`";

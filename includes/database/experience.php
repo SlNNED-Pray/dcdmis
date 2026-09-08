@@ -72,3 +72,13 @@ function governmentService($id)
     $sql = "SELECT * FROM `service_records` WHERE `employee_id` = ? AND `is_government_service` = '1' ORDER BY `from_date` DESC";
     return query($sql, [$id]);
 }
+
+function activePlantillaExperience($employeeId)
+{
+    $sql = "SELECT sr.*, pi.`item_number`, pi.`position_id` 
+            FROM `service_records` AS sr
+            LEFT JOIN `plantilla_items` AS pi ON sr.`plantilla_item_id` = pi.`id`
+            WHERE sr.`employee_id` = ? AND sr.`is_present` = 1 AND sr.`to_date` IS NULL 
+            ORDER BY sr.`from_date` DESC LIMIT 1";
+    return find($sql, [$employeeId]);
+}

@@ -134,7 +134,17 @@ foreach ($items as $item) {
                                 <?= toDatetime($app['created_at']) ?>
                             </td>
                             <td class="align-middle text-left">
-                                <div><?= applicantName($app['application_code']) ?></div>
+                                <?php
+                                $applicantId = $app['application_code_id'] ?? applicantId($app['application_code']);
+                                $applicantNameStr = applicantName($app['application_code']);
+                                ?>
+                                <div class="font-weight-bold">
+                                    <?php if ($applicantId): ?>
+                                        <a href="<?= e(customUri('hrmis', 'Applicant Information', $applicantId)) ?>"><?= e($applicantNameStr) ?></a>
+                                    <?php else: ?>
+                                        <?= e($applicantNameStr) ?>
+                                    <?php endif; ?>
+                                </div>
                                 <?php if ($app['is_employed']): ?>
                                     <span class="badge badge-primary py-1 px-2">Internal</span>
                                 <?php else: ?>

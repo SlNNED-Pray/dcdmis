@@ -138,7 +138,11 @@ messageAlert($showAlert, $message, $success);
                     </div>
                     <div class="card-body">
                         <h5 class="text-uppercase font-weight-bold text-gray-800 mb-1">
-                            <?= e($applicantName) ?>
+                            <?php if (!empty($appRecord['application_code_id'])): ?>
+                                <a href="<?= e(customUri('hrmis', 'Applicant Information', $appRecord['application_code_id'])) ?>" target="_blank" title="View Applicant Information"><?= e($applicantName) ?></a>
+                            <?php else: ?>
+                                <?= e($applicantName) ?>
+                            <?php endif; ?>
                         </h5>
                         <p class="text-muted mb-0 small">
                             <?= e($appCode) ?>
