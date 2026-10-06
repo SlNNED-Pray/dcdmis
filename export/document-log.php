@@ -25,7 +25,7 @@ $document = document($documentId); ?>
         </tr>
         <tr>
             <th>Type</th>
-            <td colspan="5"><?= documentType($document['document_type_id']) ?></td>
+            <td colspan="5"><?= documentType($document['document_type_id'])['name'] ?></td>
         </tr>
         <tr>
             <th>Description</th>

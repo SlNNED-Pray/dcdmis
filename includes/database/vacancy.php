@@ -677,6 +677,11 @@ function qualifiedApplicantsAssessmentResults($publicationId)
                 s.training_score,
                 s.experience_score,
                 s.performance_score,
+                s.pbet_let_lept_score,
+                s.ppst_cot_score,
+                s.ppst_reflection_score,
+                s.ppst_score,
+                s.bei_score,
                 s.outstanding_accomplishments_score,
                 s.application_of_education_score,
                 s.application_of_ld_score,
@@ -1171,3 +1176,34 @@ function canClosePublication($publication_id)
         'reason' => null
     ];
 }
+
+function getScoringCategoryLabel($salaryGrade, $category, $title = '')
+{
+    $title = trim($title);
+
+    if (
+        preg_match('/Master\s+Teacher\s+(I|II|III|1|2|3)\b/i', $title) ||
+        preg_match('/Teacher\s+(II|III|IV|V|VI|VII|2|3|4|5|6|7)\b/i', $title)
+    ) {
+        return 'Teacher II to Teacher III and Master Teacher I to Master Teacher III';
+    }
+
+    if (preg_match('/\bTeacher\s+(I|1)\b/i', $title) && !preg_match('/\bTeacher\s+(I[IVX]|V|X|1[0-9])\b/i', $title)) {
+        return 'Teacher I (DO 007 s. 2023)';
+    }
+
+    $isPrincipal = stripos($title, 'Principal') !== false;
+    if ($isPrincipal && $salaryGrade >= 17 && $salaryGrade <= 22) {
+        return 'SG 17-22 (School Administration Positions)';
+    } elseif ($salaryGrade >= 1 && $salaryGrade <= 9) {
+        return stripos($category, 'general service') !== false
+            ? 'SG 1-9 (General Services)'
+            : 'SG 1-9 (Non-General Services)';
+    } elseif ($salaryGrade >= 10 && $salaryGrade <= 22) {
+        return 'SG 10-22';
+    } elseif ($salaryGrade == 24) {
+        return 'SG 24 (Chief Positions)';
+    } else {
+        return 'SG 10-22';
+    }
+}

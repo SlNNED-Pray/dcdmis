@@ -2250,20 +2250,7 @@ if (isset($_POST['save-assessment-score'])) {
         $positionCat = $positionData ? $positionData['category'] : '';
 
         $positionTitle = $positionData ? $positionData['official_title'] : '';
-        $isPrincipal = stripos($positionTitle, 'Principal') !== false;
-        if ($isPrincipal && $positionSG >= 17 && $positionSG <= 22) {
-            $sgLabel = 'SG 17-22 (School Administration Positions)';
-        } elseif ($positionSG >= 1 && $positionSG <= 9) {
-            $sgLabel = stripos($positionCat, 'general service') !== false
-                ? 'SG 1-9 (General Services)'
-                : 'SG 1-9 (Non-General Services)';
-        } elseif ($positionSG >= 10 && $positionSG <= 22) {
-            $sgLabel = 'SG 10-22';
-        } elseif ($positionSG == 24) {
-            $sgLabel = 'SG 24 (Chief Positions)';
-        } else {
-            $sgLabel = 'SG 10-22';
-        }
+        $sgLabel = getScoringCategoryLabel($positionSG, $positionCat, $positionTitle);
 
         $scoringWeights = find(
             "SELECT * FROM `scoring_criteria_weights` WHERE `scoring_category` = ? LIMIT 1",
@@ -2279,6 +2266,11 @@ if (isset($_POST['save-assessment-score'])) {
             'app_edu' => $scoringWeights ? (float) $scoringWeights['application_education_max_points'] : 10,
             'app_ld' => $scoringWeights ? (float) $scoringWeights['application_ld_max_points'] : 10,
             'potential' => $scoringWeights ? (float) $scoringWeights['potential_max_points'] : 20,
+            'pbet_let_lept' => $scoringWeights ? (float) ($scoringWeights['pbet_let_lept_max_points'] ?? 0) : 0,
+            'ppst_cot' => $scoringWeights ? (float) ($scoringWeights['ppst_cot_max_points'] ?? 0) : 0,
+            'ppst_reflection' => $scoringWeights ? (float) ($scoringWeights['ppst_reflection_max_points'] ?? 0) : 0,
+            'ppst' => $scoringWeights ? (float) ($scoringWeights['ppst_max_points'] ?? 0) : 0,
+            'bei' => $scoringWeights ? (float) ($scoringWeights['bei_max_points'] ?? 0) : 0,
             'total' => $scoringWeights ? (float) $scoringWeights['total_max_points'] : 100,
         ];
 
@@ -2289,51 +2281,109 @@ if (isset($_POST['save-assessment-score'])) {
         $accomplishmentsScore = round((float) ($_POST['outstanding_accomplishments_score'] ?? 0), 3);
         $appEduScore = round((float) ($_POST['application_of_education_score'] ?? 0), 3);
         $appLdScore = round((float) ($_POST['application_of_ld_score'] ?? 0), 3);
+
+        $pbetScore = round((float) ($_POST['pbet_let_lept_score'] ?? 0), 3);
+        $ppstCotScore = round((float) ($_POST['ppst_cot_score'] ?? 0), 3);
+        $ppstReflectionScore = round((float) ($_POST['ppst_reflection_score'] ?? 0), 3);
+        $ppstScore = round((float) ($_POST['ppst_score'] ?? $ppstCotScore), 3);
+
         $examRaw = round((float) ($_POST['potential_written_exam_raw'] ?? 0), 3);
-        $beiRaw = round((float) ($_POST['potential_bei_raw'] ?? 0), 3);
+        $beiRaw = round((float) ($_POST['potential_bei_raw'] ?? $_POST['bei_score'] ?? 0), 3);
         $wstRaw = round((float) ($_POST['potential_wst_raw'] ?? 0), 3);
+        $beiScore = round((float) ($_POST['bei_score'] ?? $beiRaw), 3);
 
-        if ($educationScore < 0 || $educationScore > $w['education']) {
-            throw new Exception("Education score must be between 0 and {$w['education']}.");
-        }
-        if ($trainingScore < 0 || $trainingScore > $w['training']) {
-            throw new Exception("Training score must be between 0 and {$w['training']}.");
-        }
-        if ($experienceScore < 0 || $experienceScore > $w['experience']) {
-            throw new Exception("Experience score must be between 0 and {$w['experience']}.");
-        }
-        if ($performanceScore < 0 || $performanceScore > $w['performance']) {
-            throw new Exception("Performance score must be between 0 and {$w['performance']}.");
-        }
-        if ($accomplishmentsScore < 0 || $accomplishmentsScore > $w['accomplishments']) {
-            throw new Exception("Accomplishments score must be between 0 and {$w['accomplishments']}.");
-        }
-        if ($appEduScore < 0 || $appEduScore > $w['app_edu']) {
-            throw new Exception("Application of Education score must be between 0 and {$w['app_edu']}.");
-        }
-        if ($appLdScore < 0 || $appLdScore > $w['app_ld']) {
-            throw new Exception("Application of L&D score must be between 0 and {$w['app_ld']}.");
-        }
+        if ($sgLabel === 'Teacher II to Teacher III and Master Teacher I to Master Teacher III') {
+            $ppstMax = $w['ppst'] > 0 ? $w['ppst'] : $w['ppst_cot'];
+            $beiMax = $w['bei'] > 0 ? $w['bei'] : $w['potential'];
 
-        // Individual raw score caps
-        if ($examRaw < 0 || $examRaw > $w['potential']) {
-            throw new Exception("Written Exam raw score must be between 0 and {$w['potential']}.");
-        }
-        if ($beiRaw < 0 || $beiRaw > $w['potential']) {
-            throw new Exception("BEI raw score must be between 0 and {$w['potential']}.");
-        }
-        if ($wstRaw < 0 || $wstRaw > $w['potential']) {
-            throw new Exception("WST raw score must be between 0 and {$w['potential']}.");
-        }
+            if ($educationScore < 0 || $educationScore > $w['education']) {
+                throw new Exception("Education score must be between 0 and {$w['education']}.");
+            }
+            if ($trainingScore < 0 || $trainingScore > $w['training']) {
+                throw new Exception("Training score must be between 0 and {$w['training']}.");
+            }
+            if ($experienceScore < 0 || $experienceScore > $w['experience']) {
+                throw new Exception("Experience score must be between 0 and {$w['experience']}.");
+            }
+            if ($performanceScore < 0 || $performanceScore > $w['performance']) {
+                throw new Exception("Performance score must be between 0 and {$w['performance']}.");
+            }
+            if ($ppstScore < 0 || $ppstScore > $ppstMax) {
+                throw new Exception("PPST score must be between 0 and {$ppstMax}.");
+            }
+            if ($beiScore < 0 || $beiScore > $beiMax) {
+                throw new Exception("BEI score must be between 0 and {$beiMax}.");
+            }
 
-        $potentialFinal = round($examRaw + $beiRaw + $wstRaw, 3);
-        if ($potentialFinal > $w['potential']) {
-            throw new Exception("Combined Potential score ({$potentialFinal}) exceeds the maximum allowed ({$w['potential']}).");
-        }
+            $ppstCotScore = $ppstScore;
+            $potentialFinal = $beiScore;
+            $beiRaw = $beiScore;
 
-        $totalAccumulated = $educationScore + $trainingScore + $experienceScore
-            + $performanceScore + $accomplishmentsScore + $appEduScore + $appLdScore
-            + $potentialFinal;
+            $totalAccumulated = $educationScore + $trainingScore + $experienceScore + $performanceScore + $ppstScore + $beiScore;
+        } elseif ($sgLabel === 'Teacher I (DO 007 s. 2023)') {
+            if ($educationScore < 0 || $educationScore > $w['education']) {
+                throw new Exception("Education score must be between 0 and {$w['education']}.");
+            }
+            if ($trainingScore < 0 || $trainingScore > $w['training']) {
+                throw new Exception("Training score must be between 0 and {$w['training']}.");
+            }
+            if ($experienceScore < 0 || $experienceScore > $w['experience']) {
+                throw new Exception("Experience score must be between 0 and {$w['experience']}.");
+            }
+            if ($pbetScore < 0 || $pbetScore > $w['pbet_let_lept']) {
+                throw new Exception("PBET/LET/LEPT score must be between 0 and {$w['pbet_let_lept']}.");
+            }
+            if ($ppstCotScore < 0 || $ppstCotScore > $w['ppst_cot']) {
+                throw new Exception("PPST COI score must be between 0 and {$w['ppst_cot']}.");
+            }
+            if ($ppstReflectionScore < 0 || $ppstReflectionScore > $w['ppst_reflection']) {
+                throw new Exception("PPST Reflection score must be between 0 and {$w['ppst_reflection']}.");
+            }
+
+            $totalAccumulated = $educationScore + $trainingScore + $experienceScore + $pbetScore + $ppstCotScore + $ppstReflectionScore;
+            $potentialFinal = 0;
+        } else {
+            if ($educationScore < 0 || $educationScore > $w['education']) {
+                throw new Exception("Education score must be between 0 and {$w['education']}.");
+            }
+            if ($trainingScore < 0 || $trainingScore > $w['training']) {
+                throw new Exception("Training score must be between 0 and {$w['training']}.");
+            }
+            if ($experienceScore < 0 || $experienceScore > $w['experience']) {
+                throw new Exception("Experience score must be between 0 and {$w['experience']}.");
+            }
+            if ($performanceScore < 0 || $performanceScore > $w['performance']) {
+                throw new Exception("Performance score must be between 0 and {$w['performance']}.");
+            }
+            if ($accomplishmentsScore < 0 || $accomplishmentsScore > $w['accomplishments']) {
+                throw new Exception("Accomplishments score must be between 0 and {$w['accomplishments']}.");
+            }
+            if ($appEduScore < 0 || $appEduScore > $w['app_edu']) {
+                throw new Exception("Application of Education score must be between 0 and {$w['app_edu']}.");
+            }
+            if ($appLdScore < 0 || $appLdScore > $w['app_ld']) {
+                throw new Exception("Application of L&D score must be between 0 and {$w['app_ld']}.");
+            }
+
+            if ($examRaw < 0 || $examRaw > $w['potential']) {
+                throw new Exception("Written Exam raw score must be between 0 and {$w['potential']}.");
+            }
+            if ($beiRaw < 0 || $beiRaw > $w['potential']) {
+                throw new Exception("BEI raw score must be between 0 and {$w['potential']}.");
+            }
+            if ($wstRaw < 0 || $wstRaw > $w['potential']) {
+                throw new Exception("WST raw score must be between 0 and {$w['potential']}.");
+            }
+
+            $potentialFinal = round($examRaw + $beiRaw + $wstRaw, 3);
+            if ($potentialFinal > $w['potential']) {
+                throw new Exception("Combined Potential score ({$potentialFinal}) exceeds the maximum allowed ({$w['potential']}).");
+            }
+
+            $totalAccumulated = $educationScore + $trainingScore + $experienceScore
+                + $performanceScore + $accomplishmentsScore + $appEduScore + $appLdScore
+                + $potentialFinal;
+        }
 
         $totalAccumulated = round(min($totalAccumulated, $w['total']), 3);
 
@@ -2345,6 +2395,10 @@ if (isset($_POST['save-assessment-score'])) {
             'education_score' => $educationScore,
             'training_score' => $trainingScore,
             'experience_score' => $experienceScore,
+            'pbet_let_lept_score' => $pbetScore,
+            'ppst_cot_score' => $ppstCotScore,
+            'ppst_reflection_score' => $ppstReflectionScore,
+            'ppst_score' => $ppstScore,
             'performance_score' => $performanceScore,
             'outstanding_accomplishments_score' => $accomplishmentsScore,
             'application_of_education_score' => $appEduScore,
@@ -2353,6 +2407,7 @@ if (isset($_POST['save-assessment-score'])) {
             'potential_bei_raw' => $beiRaw,
             'potential_wst_raw' => $wstRaw,
             'potential_final_score' => $potentialFinal,
+            'bei_score' => $beiScore,
             'total_accumulated_score' => $totalAccumulated,
             'hrmspb_remarks' => sanitize($_POST['hrmspb_remarks'] ?? '')
         ];
@@ -2387,18 +2442,9 @@ if (isset($_POST['save-assessment-score'])) {
             $otherPosition = strtoupper($otherPositionData ? $otherPositionData['official_title'] : 'Unknown Position');
             $otherSG = $otherPositionData ? (int) $otherPositionData['salary_grade'] : 0;
             $otherCat = $otherPositionData ? $otherPositionData['category'] : '';
+            $otherTitle = $otherPositionData ? $otherPositionData['official_title'] : '';
 
-            if ($otherSG >= 1 && $otherSG <= 9) {
-                $otherSgLabel = stripos($otherCat, 'general service') !== false
-                    ? 'SG 1-9 (General Services)'
-                    : 'SG 1-9 (Non-General Services)';
-            } elseif ($otherSG >= 10 && $otherSG <= 22) {
-                $otherSgLabel = 'SG 10-22';
-            } elseif ($otherSG == 24) {
-                $otherSgLabel = 'SG 24 (Chief Positions)';
-            } else {
-                $otherSgLabel = 'SG 10-22';
-            }
+            $otherSgLabel = getScoringCategoryLabel($otherSG, $otherCat, $otherTitle);
 
             if ($otherSgLabel !== $sgLabel) {
                 throw new Exception("Position '{$otherPosition}' does not have the same scoring criteria weights.");

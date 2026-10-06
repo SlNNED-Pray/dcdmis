@@ -249,7 +249,7 @@ function updatePmIpcrfApprovingOfficer($id, $approvingOfficerId)
 function pmObjectives($ipcrfId)
 {
     return query(
-        "SELECT * FROM `pm_objectives` WHERE `ipcrf_id` = ? ORDER BY `kra_id` ASC, `sort_order` ASC",
+        "SELECT o.* FROM `pm_objectives` o LEFT JOIN `pm_kra` k ON o.`kra_id` = k.`id` WHERE o.`ipcrf_id` = ? ORDER BY COALESCE(k.`sort_order`, o.`kra_id`) ASC, o.`kra_title` ASC, o.`sort_order` ASC",
         [$ipcrfId]
     ) ?: [];
 }

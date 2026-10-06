@@ -94,7 +94,7 @@ messageAlert($showAlert, $message, $success);
                                 <option value="1" <?= setOptionSelected('1', $type) ?>>Others</option>
                             </select>
                         <?php else: ?>
-                            <input id="document-type-name" type="text" class="form-control" value="<?= documentType($type) ?>" disabled>
+                            <input id="document-type-name" type="text" class="form-control" value="<?= documentType($type)['name'] ?>" disabled>
                             <input type="hidden" name="document-type" value="<?= $type ?>">
                         <?php endif ?>
                     </td>

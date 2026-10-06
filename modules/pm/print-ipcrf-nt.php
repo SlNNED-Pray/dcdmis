@@ -392,7 +392,17 @@ $leadershipAvg = pmCompetencyCategoryAverage($ipcrfId, 'leadership');
         <tbody>
             <?php if (!empty($objectives)):
                 $i = 1;
-                $totalScore = 0; ?>
+                $totalScore = 0;
+                // Pre-calculate rowspans for KRA grouping
+                $kraRowspans = [];
+                foreach ($objectives as $obj) {
+                    $key = strtolower(trim($obj['kra_title']));
+                    if (!isset($kraRowspans[$key])) {
+                        $kraRowspans[$key] = 0;
+                    }
+                    $kraRowspans[$key]++;
+                }
+                $kraRendered = []; ?>
                 <?php foreach ($objectives as $obj):
                     $q = $obj['rating_q'] ?? null;
                     $e = $obj['rating_e'] ?? null;
@@ -402,9 +412,14 @@ $leadershipAvg = pmCompetencyCategoryAverage($ipcrfId, 'leadership');
                     if ($score !== null)
                         $totalScore += $score;
                     $perfInd = !empty($obj['performance_indicators']) ? $obj['performance_indicators'] : $obj['performance_indicator'];
+                    $kraKey = strtolower(trim($obj['kra_title']));
+                    $isFirstInKra = !isset($kraRendered[$kraKey]);
+                    if ($isFirstInKra) $kraRendered[$kraKey] = true;
                     ?>
                     <tr>
-                        <td><?= e($obj['kra_title']) ?></td>
+                        <?php if ($isFirstInKra): ?>
+                            <td rowspan="<?= $kraRowspans[$kraKey] ?>" style="vertical-align: middle;"><?= e($obj['kra_title']) ?></td>
+                        <?php endif; ?>
                         <td><?= e($obj['objective']) ?></td>
                         <td class="text-center"><?= e($obj['timeline'] ?? '-') ?></td>
                         <td class="text-center"><?= e($obj['weight'] ?? '0') ?>%</td>

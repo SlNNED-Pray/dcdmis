@@ -38,7 +38,7 @@ if ($document) {
             <tr>
                 <th class="align-top pr-3" scope="row">Type:</th>
                 <td class="text-uppercase">
-                    <?= documentType($document['document_type_id']) ?>
+                    <?= documentType($document['document_type_id'])['name'] ?>
                 </td>
             </tr>
             <tr>

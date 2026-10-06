@@ -63,6 +63,11 @@ if ($weightsData) {
             'app_edu' => (float) $w['application_education_max_points'],
             'app_ld' => (float) $w['application_ld_max_points'],
             'potential' => (float) $w['potential_max_points'],
+            'pbet_let_lept' => (float) ($w['pbet_let_lept_max_points'] ?? 0),
+            'ppst_cot' => (float) ($w['ppst_cot_max_points'] ?? 0),
+            'ppst_reflection' => (float) ($w['ppst_reflection_max_points'] ?? 0),
+            'ppst' => (float) ($w['ppst_max_points'] ?? 0),
+            'bei' => (float) ($w['bei_max_points'] ?? 0),
             'total' => (float) $w['total_max_points'],
         ];
     }
@@ -70,20 +75,7 @@ if ($weightsData) {
 
 function getScoringCategoryLabelForResults($salaryGrade, $category, $title = '')
 {
-    $isPrincipal = stripos($title, 'Principal') !== false;
-    if ($isPrincipal && $salaryGrade >= 17 && $salaryGrade <= 22) {
-        return 'SG 17-22 (School Administration Positions)';
-    } elseif ($salaryGrade >= 1 && $salaryGrade <= 9) {
-        return stripos($category, 'general service') !== false
-            ? 'SG 1-9 (General Services)'
-            : 'SG 1-9 (Non-General Services)';
-    } elseif ($salaryGrade >= 10 && $salaryGrade <= 22) {
-        return 'SG 10-22';
-    } elseif ($salaryGrade == 24) {
-        return 'SG 24 (Chief Positions)';
-    } else {
-        return 'SG 10-22';
-    }
+    return getScoringCategoryLabel($salaryGrade, $category, $title);
 }
 
 messageAlert($showAlert, $message, $success);
@@ -170,8 +162,12 @@ messageAlert($showAlert, $message, $success);
                         'app_edu' => 10,
                         'app_ld' => 10,
                         'potential' => 20,
+                        'ppst' => 0,
+                        'bei' => 0,
                         'total' => 100,
                     ];
+                    $isTeacher2to7orMT = ($sgLabel === 'Teacher II to Teacher III and Master Teacher I to Master Teacher III' || $sgLabel === 'Teacher II to Teacher III' || $sgLabel === 'Teacher II to Teacher VII' || $sgLabel === 'Teacher III to Teacher VII' || $sgLabel === 'Master Teacher I to Master Teacher III');
+                    $isTeacher1 = ($sgLabel === 'Teacher I (DO 007 s. 2023)');
                     ?>
                     <div class="tab-pane fade <?= $isFirst ? 'show active' : '' ?> px-3" id="<?= $tabId ?>" role="tabpanel"
                         aria-labelledby="<?= $tabId ?>-tab">
@@ -209,21 +205,44 @@ messageAlert($showAlert, $message, $success);
                                             <th class="align-middle" style="font-size: 0.8rem;">Experience<br><span
                                                     class="text-muted font-weight-normal small">Max:
                                                     <?= $weights['experience'] ?></span></th>
-                                            <th class="align-middle" style="font-size: 0.8rem;">Performance<br><span
-                                                    class="text-muted font-weight-normal small">Max:
-                                                    <?= $weights['performance'] ?></span></th>
-                                            <th class="align-middle" style="font-size: 0.8rem;">Accomplishments<br><span
-                                                    class="text-muted font-weight-normal small">Max:
-                                                    <?= $weights['accomplishments'] ?></span></th>
-                                            <th class="align-middle" style="font-size: 0.8rem;">App. of Edu.<br><span
-                                                    class="text-muted font-weight-normal small">Max:
-                                                    <?= $weights['app_edu'] ?></span></th>
-                                            <th class="align-middle" style="font-size: 0.8rem;">App. of L&D<br><span
-                                                    class="text-muted font-weight-normal small">Max:
-                                                    <?= $weights['app_ld'] ?></span></th>
-                                            <th class="align-middle" style="font-size: 0.8rem;">Potential<br><span
-                                                    class="text-muted font-weight-normal small">Max:
-                                                    <?= $weights['potential'] ?></span></th>
+                                            <?php if ($isTeacher2to7orMT): ?>
+                                                <th class="align-middle" style="font-size: 0.8rem;">Performance<br><span
+                                                        class="text-muted font-weight-normal small">Max:
+                                                        <?= $weights['performance'] ?></span></th>
+                                                <th class="align-middle" style="font-size: 0.8rem;">PPST<br><span
+                                                        class="text-muted font-weight-normal small">Max:
+                                                        <?= $weights['ppst'] > 0 ? $weights['ppst'] : $weights['ppst_cot'] ?></span>
+                                                </th>
+                                                <th class="align-middle" style="font-size: 0.8rem;">BEI<br><span
+                                                        class="text-muted font-weight-normal small">Max:
+                                                        <?= $weights['bei'] > 0 ? $weights['bei'] : $weights['potential'] ?></span></th>
+                                            <?php elseif ($isTeacher1): ?>
+                                                <th class="align-middle" style="font-size: 0.8rem;">PBET/LET/LEPT<br><span
+                                                        class="text-muted font-weight-normal small">Max:
+                                                        <?= $weights['pbet_let_lept'] ?></span></th>
+                                                <th class="align-middle" style="font-size: 0.8rem;">PPST COI<br><span
+                                                        class="text-muted font-weight-normal small">Max:
+                                                        <?= $weights['ppst_cot'] ?></span></th>
+                                                <th class="align-middle" style="font-size: 0.8rem;">PPST Reflection<br><span
+                                                        class="text-muted font-weight-normal small">Max:
+                                                        <?= $weights['ppst_reflection'] ?></span></th>
+                                            <?php else: ?>
+                                                <th class="align-middle" style="font-size: 0.8rem;">Performance<br><span
+                                                        class="text-muted font-weight-normal small">Max:
+                                                        <?= $weights['performance'] ?></span></th>
+                                                <th class="align-middle" style="font-size: 0.8rem;">Accomplishments<br><span
+                                                        class="text-muted font-weight-normal small">Max:
+                                                        <?= $weights['accomplishments'] ?></span></th>
+                                                <th class="align-middle" style="font-size: 0.8rem;">App. of Edu.<br><span
+                                                        class="text-muted font-weight-normal small">Max:
+                                                        <?= $weights['app_edu'] ?></span></th>
+                                                <th class="align-middle" style="font-size: 0.8rem;">App. of L&D<br><span
+                                                        class="text-muted font-weight-normal small">Max:
+                                                        <?= $weights['app_ld'] ?></span></th>
+                                                <th class="align-middle" style="font-size: 0.8rem;">Potential<br><span
+                                                        class="text-muted font-weight-normal small">Max:
+                                                        <?= $weights['potential'] ?></span></th>
+                                            <?php endif; ?>
                                             <th class="align-middle" style="font-size: 0.85rem;">Total Score<br><span
                                                     class="text-muted font-weight-normal small">Max: <?= $weights['total'] ?></span>
                                             </th>
@@ -261,7 +280,8 @@ messageAlert($showAlert, $message, $success);
                                                     <?php
                                                     $applicantId = $res['application_code_id'] ?? applicantId($res['application_code']);
                                                     if ($applicantId): ?>
-                                                        <a href="<?= e(customUri('hrmis', 'Applicant Information', $applicantId)) ?>"><?= e($applicantName) ?></a>
+                                                        <a
+                                                            href="<?= e(customUri('hrmis', 'Applicant Information', $applicantId)) ?>"><?= e($applicantName) ?></a>
                                                     <?php else: ?>
                                                         <?= e($applicantName) ?>
                                                     <?php endif; ?>
@@ -278,21 +298,43 @@ messageAlert($showAlert, $message, $success);
                                                 <td class="align-middle">
                                                     <?= $isAssessed ? number_format($res['experience_score'], 3, '.', '') : '<span class="text-muted font-italic small">-</span>' ?>
                                                 </td>
-                                                <td class="align-middle">
-                                                    <?= $isAssessed ? number_format($res['performance_score'], 3, '.', '') : '<span class="text-muted font-italic small">-</span>' ?>
-                                                </td>
-                                                <td class="align-middle">
-                                                    <?= $isAssessed ? number_format($res['outstanding_accomplishments_score'], 3, '.', '') : '<span class="text-muted font-italic small">-</span>' ?>
-                                                </td>
-                                                <td class="align-middle">
-                                                    <?= $isAssessed ? number_format($res['application_of_education_score'], 3, '.', '') : '<span class="text-muted font-italic small">-</span>' ?>
-                                                </td>
-                                                <td class="align-middle">
-                                                    <?= $isAssessed ? number_format($res['application_of_ld_score'], 3, '.', '') : '<span class="text-muted font-italic small">-</span>' ?>
-                                                </td>
-                                                <td class="align-middle">
-                                                    <?= $isAssessed ? number_format($res['potential_final_score'], 3, '.', '') : '<span class="text-muted font-italic small">-</span>' ?>
-                                                </td>
+                                                <?php if ($isTeacher2to7orMT): ?>
+                                                    <td class="align-middle">
+                                                        <?= $isAssessed ? number_format($res['performance_score'], 3, '.', '') : '<span class="text-muted font-italic small">-</span>' ?>
+                                                    </td>
+                                                    <td class="align-middle">
+                                                        <?= $isAssessed ? number_format($res['ppst_score'] ?? $res['ppst_cot_score'] ?? 0, 3, '.', '') : '<span class="text-muted font-italic small">-</span>' ?>
+                                                    </td>
+                                                    <td class="align-middle">
+                                                        <?= $isAssessed ? number_format($res['bei_score'] ?? $res['potential_bei_raw'] ?? $res['potential_final_score'] ?? 0, 3, '.', '') : '<span class="text-muted font-italic small">-</span>' ?>
+                                                    </td>
+                                                <?php elseif ($isTeacher1): ?>
+                                                    <td class="align-middle">
+                                                        <?= $isAssessed ? number_format($res['pbet_let_lept_score'] ?? 0, 3, '.', '') : '<span class="text-muted font-italic small">-</span>' ?>
+                                                    </td>
+                                                    <td class="align-middle">
+                                                        <?= $isAssessed ? number_format($res['ppst_cot_score'] ?? 0, 3, '.', '') : '<span class="text-muted font-italic small">-</span>' ?>
+                                                    </td>
+                                                    <td class="align-middle">
+                                                        <?= $isAssessed ? number_format($res['ppst_reflection_score'] ?? 0, 3, '.', '') : '<span class="text-muted font-italic small">-</span>' ?>
+                                                    </td>
+                                                <?php else: ?>
+                                                    <td class="align-middle">
+                                                        <?= $isAssessed ? number_format($res['performance_score'], 3, '.', '') : '<span class="text-muted font-italic small">-</span>' ?>
+                                                    </td>
+                                                    <td class="align-middle">
+                                                        <?= $isAssessed ? number_format($res['outstanding_accomplishments_score'], 3, '.', '') : '<span class="text-muted font-italic small">-</span>' ?>
+                                                    </td>
+                                                    <td class="align-middle">
+                                                        <?= $isAssessed ? number_format($res['application_of_education_score'], 3, '.', '') : '<span class="text-muted font-italic small">-</span>' ?>
+                                                    </td>
+                                                    <td class="align-middle">
+                                                        <?= $isAssessed ? number_format($res['application_of_ld_score'], 3, '.', '') : '<span class="text-muted font-italic small">-</span>' ?>
+                                                    </td>
+                                                    <td class="align-middle">
+                                                        <?= $isAssessed ? number_format($res['potential_final_score'], 3, '.', '') : '<span class="text-muted font-italic small">-</span>' ?>
+                                                    </td>
+                                                <?php endif; ?>
                                                 <td class="align-middle font-weight-bold text-primary">
                                                     <?= $isAssessed ? number_format($res['total_accumulated_score'], 3, '.', '') : '<span class="text-muted font-italic small">Not Assessed</span>' ?>
                                                 </td>

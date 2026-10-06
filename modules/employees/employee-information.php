@@ -145,11 +145,13 @@ $employeePhoto = '';
             </li>
         </ul>
 
-        <div class="d-sm-flex align-items-center flex-row-reverse my-2">
-            <div class="d-inline-block">
-                <?php linkButtonSplit(customUri('print', 'Personal Data Sheet', $employeeId), 'Print', 'fa-print', 'Print file', 'success', true) ?>
+        <?php if (false): ?>
+            <div class="d-sm-flex align-items-center flex-row-reverse my-2">
+                <div class="d-inline-block">
+                    <?php linkButtonSplit(customUri('print', 'Personal Data Sheet', $employeeId), 'Print', 'fa-print', 'Print file', 'success', true) ?>
+                </div>
             </div>
-        </div>
+        <?php endif ?>
 
         <div class="tab-content mt-2">
             <?php

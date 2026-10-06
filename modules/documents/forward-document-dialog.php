@@ -44,7 +44,8 @@ if ($document) {
 
                     <div class="form-group">
                         <label for="type" class="mb-0">Type</label>
-                        <input id="type" class="form-control text-uppercase" value="<?= documentType($type) ?>" disabled>
+                        <input id="type" class="form-control text-uppercase" value="<?= documentType($type)['name'] ?>"
+                            disabled>
                     </div>
 
                     <div class="form-group">
@@ -116,7 +117,8 @@ if ($document) {
                         <label class="mb-0" for="file-upload">Attachment</label>
                         <input id="file-upload" name="file-upload[]" type="file" multiple class="w-100"
                             accept="application/msword, application/vnd.openxmlformats-officedocument.wordprocessingml.document, application/pdf, image/*, application/vnd.ms-powerpoint, application/vnd.openxmlformats-officedocument.presentationml.presentation, application/vnd.ms-excel, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
-                        <div class="small mt-1 text-muted">Allowed: .doc/docx, .xls/xlsx, .ppt/pptx, .jpg/jpeg, .png, .gif, .pdf (Max file upload size: <?= UPLOAD_MAX_FILESIZE ?>B)</div>
+                        <div class="small mt-1 text-muted">Allowed: .doc/docx, .xls/xlsx, .ppt/pptx, .jpg/jpeg, .png, .gif,
+                            .pdf (Max file upload size: <?= UPLOAD_MAX_FILESIZE ?>B)</div>
                     </div>
 
                     <?php requiredLegend(0) ?>

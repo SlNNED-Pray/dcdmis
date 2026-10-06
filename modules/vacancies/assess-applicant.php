@@ -28,21 +28,12 @@ if ($applicationId) {
         $positionSG = $positionData ? (int) $positionData['salary_grade'] : 0;
         $positionCategory = $positionData ? $positionData['category'] : 'N/A';
 
-        $isPrincipal = stripos($positionTitle, 'Principal') !== false;
-        if ($isPrincipal && $positionSG >= 17 && $positionSG <= 22) {
-            $sgLabel = 'SG 17-22 (School Administration Positions)';
-        } elseif ($positionSG >= 1 && $positionSG <= 9) {
-            $sgLabel = stripos($positionCategory, 'general service') !== false
-                ? 'SG 1-9 (General Services)'
-                : 'SG 1-9 (Non-General Services)';
-        } elseif ($positionSG >= 10 && $positionSG <= 22) {
-            $sgLabel = 'SG 10-22';
-        } elseif ($positionSG == 24) {
-            $sgLabel = 'SG 24 (Chief Positions)';
-        } else {
-            // Fallback: use SG 10-22 category for unspecified grades
-            $sgLabel = 'SG 10-22';
-        }
+        $positionData = find("SELECT * FROM `positions` WHERE `id` = ?", [$appRecord['position_id']]);
+        $positionTitle = $positionData ? $positionData['official_title'] : 'Unknown Position';
+        $positionSG = $positionData ? (int) $positionData['salary_grade'] : 0;
+        $positionCategory = $positionData ? $positionData['category'] : 'N/A';
+
+        $sgLabel = getScoringCategoryLabel($positionSG, $positionCategory, $positionTitle);
 
         $scoringWeights = find(
             "SELECT * FROM `scoring_criteria_weights` WHERE `scoring_category` = ? LIMIT 1",
@@ -64,9 +55,17 @@ $weights = [
     'application_edu' => $scoringWeights ? (float) $scoringWeights['application_education_max_points'] : 10,
     'application_ld' => $scoringWeights ? (float) $scoringWeights['application_ld_max_points'] : 10,
     'potential' => $scoringWeights ? (float) $scoringWeights['potential_max_points'] : 20,
+    'pbet_let_lept' => $scoringWeights ? (float) ($scoringWeights['pbet_let_lept_max_points'] ?? 0) : 0,
+    'ppst_cot' => $scoringWeights ? (float) ($scoringWeights['ppst_cot_max_points'] ?? 0) : 0,
+    'ppst_reflection' => $scoringWeights ? (float) ($scoringWeights['ppst_reflection_max_points'] ?? 0) : 0,
+    'ppst' => $scoringWeights ? (float) ($scoringWeights['ppst_max_points'] ?? 0) : 0,
+    'bei' => $scoringWeights ? (float) ($scoringWeights['bei_max_points'] ?? 0) : 0,
     'total' => $scoringWeights ? (float) $scoringWeights['total_max_points'] : 100,
-    'category_label' => $scoringWeights ? $scoringWeights['scoring_category'] : 'N/A',
+    'category_label' => $scoringWeights ? $scoringWeights['scoring_category'] : $sgLabel,
 ];
+
+$isTeacher2to3orMT = ($weights['category_label'] === 'Teacher II to Teacher III and Master Teacher I to Master Teacher III' || $weights['category_label'] === 'Teacher II to Teacher III' || $weights['category_label'] === 'Teacher II to Teacher VII' || $weights['category_label'] === 'Teacher III to Teacher VII' || $weights['category_label'] === 'Master Teacher I to Master Teacher III');
+$isTeacher1 = ($weights['category_label'] === 'Teacher I (DO 007 s. 2023)');
 
 if (!$appRecord || !$publication) {
     require_once(root() . '/modules/error/no-results-found.php');
@@ -139,7 +138,8 @@ messageAlert($showAlert, $message, $success);
                     <div class="card-body">
                         <h5 class="text-uppercase font-weight-bold text-gray-800 mb-1">
                             <?php if (!empty($appRecord['application_code_id'])): ?>
-                                <a href="<?= e(customUri('hrmis', 'Applicant Information', $appRecord['application_code_id'])) ?>" target="_blank" title="View Applicant Information"><?= e($applicantName) ?></a>
+                                <a href="<?= e(customUri('hrmis', 'Applicant Information', $appRecord['application_code_id'])) ?>"
+                                    target="_blank" title="View Applicant Information"><?= e($applicantName) ?></a>
                             <?php else: ?>
                                 <?= e($applicantName) ?>
                             <?php endif; ?>
@@ -227,64 +227,94 @@ messageAlert($showAlert, $message, $success);
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr>
-                                    <td class="px-2">Education</t d>
-                                    <td class="text-center px-2">
-                                        <?= $weights['education'] ?>
-                                    </td>
-                                </tr>
-                                <tr>
-
-                                    <td class="px-2">Training</td>
-                                    <td class="text-center px-2">
-                                        <?= $weights['training'] ?>
-                                    </td>
-                                </tr>
-
-                                <tr>
-                                    <td class="px-2">Experience</td>
-                                    <td class="text-center px-2">
-                                        <?= $weights['experience'] ?>
-                                    </td>
-
-                                </tr>
-                                <tr>
-                                    <td class="px-2">Performance</td>
-                                    <td class="text-center px-2">
-                                        <?= $weights['performance'] ?>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td class="px-2">Accomplishments</td>
-                                    <td class="text-center px-2">
-
-                                        <?= $weights['accomplishments'] ?>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td class="px-2">Application
-                                        of Education</td>
-                                    <td class="text-center px-2">
-                                        <?= $weights['application_edu'] ?>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td class="px-2">Application of L&D</td>
-                                    <td class="text-center px-2">
-                                        <?= $weights['application_ld'] ?>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td class="px-2">Potential</td>
-                                    <td class="text-center px-2">
-                                        <?= $weights['potential'] ?>
-                                    </td>
-                                </tr>
+                                <?php if ($weights['education'] > 0): ?>
+                                    <tr>
+                                        <td class="px-2">Education</td>
+                                        <td class="text-center px-2"><?= $weights['education'] ?></td>
+                                    </tr>
+                                <?php endif; ?>
+                                <?php if ($weights['training'] > 0): ?>
+                                    <tr>
+                                        <td class="px-2">Training</td>
+                                        <td class="text-center px-2"><?= $weights['training'] ?></td>
+                                    </tr>
+                                <?php endif; ?>
+                                <?php if ($weights['experience'] > 0): ?>
+                                    <tr>
+                                        <td class="px-2">Experience</td>
+                                        <td class="text-center px-2"><?= $weights['experience'] ?></td>
+                                    </tr>
+                                <?php endif; ?>
+                                <?php if ($weights['performance'] > 0): ?>
+                                    <tr>
+                                        <td class="px-2">Performance</td>
+                                        <td class="text-center px-2">
+                                            <?= $weights['performance'] ?>
+                                        </td>
+                                    </tr>
+                                <?php endif; ?>
+                                <?php if ($weights['pbet_let_lept'] > 0): ?>
+                                    <tr>
+                                        <td class="px-2">PBET / LET / LEPT Rating</td>
+                                        <td class="text-center px-2"><?= $weights['pbet_let_lept'] ?></td>
+                                    </tr>
+                                <?php endif; ?>
+                                <?php if ($isTeacher2to3orMT): ?>
+                                    <tr>
+                                        <td class="px-2">PPST</td>
+                                        <td class="text-center px-2">
+                                            <?= $weights['ppst'] > 0 ? $weights['ppst'] : $weights['ppst_cot'] ?>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="px-2">Behavioral Events Interview (BEI)</td>
+                                        <td class="text-center px-2">
+                                            <?= $weights['bei'] > 0 ? $weights['bei'] : $weights['potential'] ?>
+                                        </td>
+                                    </tr>
+                                <?php else: ?>
+                                    <?php if ($weights['ppst_cot'] > 0): ?>
+                                        <tr>
+                                            <td class="px-2">PPST COI</td>
+                                            <td class="text-center px-2"><?= $weights['ppst_cot'] ?></td>
+                                        </tr>
+                                    <?php endif; ?>
+                                    <?php if ($weights['ppst_reflection'] > 0): ?>
+                                        <tr>
+                                            <td class="px-2">PPST Reflection</td>
+                                            <td class="text-center px-2"><?= $weights['ppst_reflection'] ?></td>
+                                        </tr>
+                                    <?php endif; ?>
+                                <?php endif; ?>
+                                <?php if (!$isTeacher2to3orMT && !$isTeacher1): ?>
+                                    <?php if ($weights['accomplishments'] > 0): ?>
+                                        <tr>
+                                            <td class="px-2">Accomplishments</td>
+                                            <td class="text-center px-2"><?= $weights['accomplishments'] ?></td>
+                                        </tr>
+                                    <?php endif; ?>
+                                    <?php if ($weights['application_edu'] > 0): ?>
+                                        <tr>
+                                            <td class="px-2">Application of Education</td>
+                                            <td class="text-center px-2"><?= $weights['application_edu'] ?></td>
+                                        </tr>
+                                    <?php endif; ?>
+                                    <?php if ($weights['application_ld'] > 0): ?>
+                                        <tr>
+                                            <td class="px-2">Application of L&D</td>
+                                            <td class="text-center px-2"><?= $weights['application_ld'] ?></td>
+                                        </tr>
+                                    <?php endif; ?>
+                                    <?php if ($weights['potential'] > 0): ?>
+                                        <tr>
+                                            <td class="px-2">Potential</td>
+                                            <td class="text-center px-2"><?= $weights['potential'] ?></td>
+                                        </tr>
+                                    <?php endif; ?>
+                                <?php endif; ?>
                                 <tr class="font-weight-bold table-warning">
                                     <td class="px-2">Total</td>
-                                    <td class="text-center px-2">
-                                        <?= $weights['total'] ?>
-                                    </td>
+                                    <td class="text-center px-2"><?= $weights['total'] ?></td>
                                 </tr>
                             </tbody>
                         </table>
@@ -309,158 +339,333 @@ messageAlert($showAlert, $message, $success);
                     <?= csrf_field(); ?>
 
                     <div class="row">
-                        <div class="col-xl-6 col-md-12 col-sm-12">
-                            <h6 class="font-weight-bold text-gray-800 mb-3">Core Assessment Criteria</h6>
-                            <div class="form-group">
-                                <label for="education_score"
-                                    class="font-weight-bold text-dark mb-0 d-flex justify-content-between">
-                                    <span>Education</span>
-                                    <span class="text-muted font-weight-normal small">Max:
-                                        <strong><?= $weights['education'] ?></strong></span>
-                                </label>
-                                <input type="number" step="0.001" min="0" max="<?= $weights['education'] ?>"
-                                    data-max="<?= $weights['education'] ?>" class="form-control score-input"
-                                    id="education_score" name="education_score"
-                                    value="<?= e(number_format($score['education_score'] ?? 0, 3, '.', '')) ?>"
-                                    required>
+                        <?php if ($isTeacher2to3orMT): ?>
+                            <!-- Teacher III - VII & Master Teacher I - III criteria form -->
+                            <div class="col-xl-6 col-md-12 col-sm-12">
+                                <h6 class="font-weight-bold text-gray-800 mb-3">Core Assessment Criteria</h6>
+                                <div class="form-group">
+                                    <label for="education_score"
+                                        class="font-weight-bold text-dark mb-0 d-flex justify-content-between">
+                                        <span>Education</span>
+                                        <span class="text-muted font-weight-normal small">Max:
+                                            <strong><?= $weights['education'] ?></strong></span>
+                                    </label>
+                                    <input type="number" step="0.001" min="0" max="<?= $weights['education'] ?>"
+                                        data-max="<?= $weights['education'] ?>" class="form-control score-input"
+                                        id="education_score" name="education_score"
+                                        value="<?= e(number_format($score['education_score'] ?? 0, 3, '.', '')) ?>"
+                                        required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="training_score"
+                                        class="font-weight-bold text-dark mb-0 d-flex justify-content-between">
+                                        <span>Training</span>
+                                        <span class="text-muted font-weight-normal small">Max:
+                                            <strong><?= $weights['training'] ?></strong></span>
+                                    </label>
+                                    <input type="number" step="0.001" min="0" max="<?= $weights['training'] ?>"
+                                        data-max="<?= $weights['training'] ?>" class="form-control score-input"
+                                        id="training_score" name="training_score"
+                                        value="<?= e(number_format($score['training_score'] ?? 0, 3, '.', '')) ?>" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="experience_score"
+                                        class="font-weight-bold text-dark mb-0 d-flex justify-content-between">
+                                        <span>Experience</span>
+                                        <span class="text-muted font-weight-normal small">Max:
+                                            <strong><?= $weights['experience'] ?></strong></span>
+                                    </label>
+                                    <input type="number" step="0.001" min="0" max="<?= $weights['experience'] ?>"
+                                        data-max="<?= $weights['experience'] ?>" class="form-control score-input"
+                                        id="experience_score" name="experience_score"
+                                        value="<?= e(number_format($score['experience_score'] ?? 0, 3, '.', '')) ?>"
+                                        required>
+                                </div>
                             </div>
-                            <div class="form-group">
-                                <label for="training_score"
-                                    class="font-weight-bold text-dark mb-0 d-flex justify-content-between">
-                                    <span>Training</span>
-                                    <span class="text-muted font-weight-normal small">Max:
-                                        <strong><?= $weights['training'] ?></strong></span>
-                                </label>
-                                <input type="number" step="0.001" min="0" max="<?= $weights['training'] ?>"
-                                    data-max="<?= $weights['training'] ?>" class="form-control score-input"
-                                    id="training_score" name="training_score"
-                                    value="<?= e(number_format($score['training_score'] ?? 0, 3, '.', '')) ?>" required>
+                            <div class="col-xl-6 col-md-12 col-sm-12">
+                                <h6 class="font-weight-bold text-gray-800 mb-3">Performance, PPST & BEI Criteria</h6>
+                                <div class="form-group">
+                                    <label for="performance_score"
+                                        class="font-weight-bold text-dark mb-0 d-flex justify-content-between">
+                                        <span>Performance</span>
+                                        <span class="text-muted font-weight-normal small">Max:
+                                            <strong><?= $weights['performance'] ?></strong></span>
+                                    </label>
+                                    <input type="number" step="0.001" min="0" max="<?= $weights['performance'] ?>"
+                                        data-max="<?= $weights['performance'] ?>" class="form-control score-input"
+                                        id="performance_score" name="performance_score"
+                                        value="<?= e(number_format($score['performance_score'] ?? 0, 3, '.', '')) ?>"
+                                        required>
+                                </div>
+                                <?php $ppstMax = $weights['ppst'] > 0 ? $weights['ppst'] : $weights['ppst_cot']; ?>
+                                <div class="form-group">
+                                    <label for="ppst_score"
+                                        class="font-weight-bold text-dark mb-0 d-flex justify-content-between">
+                                        <span>PPST</span>
+                                        <span class="text-muted font-weight-normal small">Max:
+                                            <strong><?= $ppstMax ?></strong></span>
+                                    </label>
+                                    <input type="number" step="0.001" min="0" max="<?= $ppstMax ?>"
+                                        data-max="<?= $ppstMax ?>" class="form-control score-input" id="ppst_score"
+                                        name="ppst_score"
+                                        value="<?= e(number_format($score['ppst_score'] ?? $score['ppst_cot_score'] ?? 0, 3, '.', '')) ?>"
+                                        required>
+                                </div>
+                                <?php $beiMax = $weights['bei'] > 0 ? $weights['bei'] : $weights['potential']; ?>
+                                <div class="form-group">
+                                    <label for="bei_score"
+                                        class="font-weight-bold text-dark mb-0 d-flex justify-content-between">
+                                        <span>Behavioral Events Interview (BEI)</span>
+                                        <span class="text-muted font-weight-normal small">Max:
+                                            <strong><?= $beiMax ?></strong></span>
+                                    </label>
+                                    <input type="number" step="0.001" min="0" max="<?= $beiMax ?>" data-max="<?= $beiMax ?>"
+                                        class="form-control score-input" id="bei_score" name="bei_score"
+                                        value="<?= e(number_format($score['bei_score'] ?? $score['potential_bei_raw'] ?? 0, 3, '.', '')) ?>"
+                                        required>
+                                </div>
                             </div>
-                            <div class="form-group">
-                                <label for="experience_score"
-                                    class="font-weight-bold text-dark mb-0 d-flex justify-content-between">
-                                    <span>Experience</span>
-                                    <span class="text-muted font-weight-normal small">Max:
-                                        <strong><?= $weights['experience'] ?></strong></span>
-                                </label>
-                                <input type="number" step="0.001" min="0" max="<?= $weights['experience'] ?>"
-                                    data-max="<?= $weights['experience'] ?>" class="form-control score-input"
-                                    id="experience_score" name="experience_score"
-                                    value="<?= e(number_format($score['experience_score'] ?? 0, 3, '.', '')) ?>"
-                                    required>
+                        <?php elseif ($isTeacher1): ?>
+                            <!-- Teacher I DO 007 s. 2023 form -->
+                            <div class="col-xl-6 col-md-12 col-sm-12">
+                                <h6 class="font-weight-bold text-gray-800 mb-3">Core Assessment Criteria</h6>
+                                <div class="form-group">
+                                    <label for="education_score"
+                                        class="font-weight-bold text-dark mb-0 d-flex justify-content-between">
+                                        <span>Education</span>
+                                        <span class="text-muted font-weight-normal small">Max:
+                                            <strong><?= $weights['education'] ?></strong></span>
+                                    </label>
+                                    <input type="number" step="0.001" min="0" max="<?= $weights['education'] ?>"
+                                        data-max="<?= $weights['education'] ?>" class="form-control score-input"
+                                        id="education_score" name="education_score"
+                                        value="<?= e(number_format($score['education_score'] ?? 0, 3, '.', '')) ?>"
+                                        required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="training_score"
+                                        class="font-weight-bold text-dark mb-0 d-flex justify-content-between">
+                                        <span>Training</span>
+                                        <span class="text-muted font-weight-normal small">Max:
+                                            <strong><?= $weights['training'] ?></strong></span>
+                                    </label>
+                                    <input type="number" step="0.001" min="0" max="<?= $weights['training'] ?>"
+                                        data-max="<?= $weights['training'] ?>" class="form-control score-input"
+                                        id="training_score" name="training_score"
+                                        value="<?= e(number_format($score['training_score'] ?? 0, 3, '.', '')) ?>" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="experience_score"
+                                        class="font-weight-bold text-dark mb-0 d-flex justify-content-between">
+                                        <span>Experience</span>
+                                        <span class="text-muted font-weight-normal small">Max:
+                                            <strong><?= $weights['experience'] ?></strong></span>
+                                    </label>
+                                    <input type="number" step="0.001" min="0" max="<?= $weights['experience'] ?>"
+                                        data-max="<?= $weights['experience'] ?>" class="form-control score-input"
+                                        id="experience_score" name="experience_score"
+                                        value="<?= e(number_format($score['experience_score'] ?? 0, 3, '.', '')) ?>"
+                                        required>
+                                </div>
                             </div>
-                            <div class="form-group">
-                                <label for="performance_score"
-                                    class="font-weight-bold text-dark mb-0 d-flex justify-content-between">
-                                    <span>Performance</span>
-                                    <span class="text-muted font-weight-normal small">Max:
-                                        <strong><?= $weights['performance'] ?></strong></span>
-                                </label>
-                                <input type="number" step="0.001" min="0" max="<?= $weights['performance'] ?>"
-                                    data-max="<?= $weights['performance'] ?>" class="form-control score-input"
-                                    id="performance_score" name="performance_score"
-                                    value="<?= e(number_format($score['performance_score'] ?? 0, 3, '.', '')) ?>"
-                                    required>
+                            <div class="col-xl-6 col-md-12 col-sm-12">
+                                <h6 class="font-weight-bold text-gray-800 mb-3">Teaching Assessment Criteria</h6>
+                                <div class="form-group">
+                                    <label for="pbet_let_lept_score"
+                                        class="font-weight-bold text-dark mb-0 d-flex justify-content-between">
+                                        <span>PBET / LET / LEPT Rating</span>
+                                        <span class="text-muted font-weight-normal small">Max:
+                                            <strong><?= $weights['pbet_let_lept'] ?></strong></span>
+                                    </label>
+                                    <input type="number" step="0.001" min="0" max="<?= $weights['pbet_let_lept'] ?>"
+                                        data-max="<?= $weights['pbet_let_lept'] ?>" class="form-control score-input"
+                                        id="pbet_let_lept_score" name="pbet_let_lept_score"
+                                        value="<?= e(number_format($score['pbet_let_lept_score'] ?? 0, 3, '.', '')) ?>"
+                                        required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="ppst_cot_score"
+                                        class="font-weight-bold text-dark mb-0 d-flex justify-content-between">
+                                        <span>PPST Classroom Observational Indicators (COI)</span>
+                                        <span class="text-muted font-weight-normal small">Max:
+                                            <strong><?= $weights['ppst_cot'] ?></strong></span>
+                                    </label>
+                                    <input type="number" step="0.001" min="0" max="<?= $weights['ppst_cot'] ?>"
+                                        data-max="<?= $weights['ppst_cot'] ?>" class="form-control score-input"
+                                        id="ppst_cot_score" name="ppst_cot_score"
+                                        value="<?= e(number_format($score['ppst_cot_score'] ?? 0, 3, '.', '')) ?>" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="ppst_reflection_score"
+                                        class="font-weight-bold text-dark mb-0 d-flex justify-content-between">
+                                        <span>PPST Non-COI / Teacher Reflection</span>
+                                        <span class="text-muted font-weight-normal small">Max:
+                                            <strong><?= $weights['ppst_reflection'] ?></strong></span>
+                                    </label>
+                                    <input type="number" step="0.001" min="0" max="<?= $weights['ppst_reflection'] ?>"
+                                        data-max="<?= $weights['ppst_reflection'] ?>" class="form-control score-input"
+                                        id="ppst_reflection_score" name="ppst_reflection_score"
+                                        value="<?= e(number_format($score['ppst_reflection_score'] ?? 0, 3, '.', '')) ?>"
+                                        required>
+                                </div>
                             </div>
-                            <div class="form-group">
-                                <label for="outstanding_accomplishments_score"
-                                    class="font-weight-bold text-dark mb-0 d-flex justify-content-between">
-                                    <span>Outstanding Accomplishments</span>
-                                    <span class="text-muted font-weight-normal small">Max:
-                                        <strong><?= $weights['accomplishments'] ?></strong></span>
-                                </label>
-                                <input type="number" step="0.001" min="0" max="<?= $weights['accomplishments'] ?>"
-                                    data-max="<?= $weights['accomplishments'] ?>" class="form-control score-input"
-                                    id="outstanding_accomplishments_score" name="outstanding_accomplishments_score"
-                                    value="<?= e(number_format($score['outstanding_accomplishments_score'] ?? 0, 3, '.', '')) ?>"
-                                    required>
+                        <?php else: ?>
+                            <!-- Standard / Generic form -->
+                            <div class="col-xl-6 col-md-12 col-sm-12">
+                                <h6 class="font-weight-bold text-gray-800 mb-3">Core Assessment Criteria</h6>
+                                <div class="form-group">
+                                    <label for="education_score"
+                                        class="font-weight-bold text-dark mb-0 d-flex justify-content-between">
+                                        <span>Education</span>
+                                        <span class="text-muted font-weight-normal small">Max:
+                                            <strong><?= $weights['education'] ?></strong></span>
+                                    </label>
+                                    <input type="number" step="0.001" min="0" max="<?= $weights['education'] ?>"
+                                        data-max="<?= $weights['education'] ?>" class="form-control score-input"
+                                        id="education_score" name="education_score"
+                                        value="<?= e(number_format($score['education_score'] ?? 0, 3, '.', '')) ?>"
+                                        required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="training_score"
+                                        class="font-weight-bold text-dark mb-0 d-flex justify-content-between">
+                                        <span>Training</span>
+                                        <span class="text-muted font-weight-normal small">Max:
+                                            <strong><?= $weights['training'] ?></strong></span>
+                                    </label>
+                                    <input type="number" step="0.001" min="0" max="<?= $weights['training'] ?>"
+                                        data-max="<?= $weights['training'] ?>" class="form-control score-input"
+                                        id="training_score" name="training_score"
+                                        value="<?= e(number_format($score['training_score'] ?? 0, 3, '.', '')) ?>" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="experience_score"
+                                        class="font-weight-bold text-dark mb-0 d-flex justify-content-between">
+                                        <span>Experience</span>
+                                        <span class="text-muted font-weight-normal small">Max:
+                                            <strong><?= $weights['experience'] ?></strong></span>
+                                    </label>
+                                    <input type="number" step="0.001" min="0" max="<?= $weights['experience'] ?>"
+                                        data-max="<?= $weights['experience'] ?>" class="form-control score-input"
+                                        id="experience_score" name="experience_score"
+                                        value="<?= e(number_format($score['experience_score'] ?? 0, 3, '.', '')) ?>"
+                                        required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="performance_score"
+                                        class="font-weight-bold text-dark mb-0 d-flex justify-content-between">
+                                        <span>Performance</span>
+                                        <span class="text-muted font-weight-normal small">Max:
+                                            <strong><?= $weights['performance'] ?></strong></span>
+                                    </label>
+                                    <input type="number" step="0.001" min="0" max="<?= $weights['performance'] ?>"
+                                        data-max="<?= $weights['performance'] ?>" class="form-control score-input"
+                                        id="performance_score" name="performance_score"
+                                        value="<?= e(number_format($score['performance_score'] ?? 0, 3, '.', '')) ?>"
+                                        required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="outstanding_accomplishments_score"
+                                        class="font-weight-bold text-dark mb-0 d-flex justify-content-between">
+                                        <span>Outstanding Accomplishments</span>
+                                        <span class="text-muted font-weight-normal small">Max:
+                                            <strong><?= $weights['accomplishments'] ?></strong></span>
+                                    </label>
+                                    <input type="number" step="0.001" min="0" max="<?= $weights['accomplishments'] ?>"
+                                        data-max="<?= $weights['accomplishments'] ?>" class="form-control score-input"
+                                        id="outstanding_accomplishments_score" name="outstanding_accomplishments_score"
+                                        value="<?= e(number_format($score['outstanding_accomplishments_score'] ?? 0, 3, '.', '')) ?>"
+                                        required>
+                                </div>
                             </div>
-                        </div>
 
-                        <div class="col-xl-6 col-md-12 col-sm-12">
-                            <h6 class="font-weight-bold text-gray-800 mb-3">Application of L and D</h6>
-                            <div class="form-group">
-                                <label for="application_of_education_score"
-                                    class="font-weight-bold text-dark mb-0 d-flex justify-content-between">
-                                    <span>Application of Education</span>
-                                    <span class="text-muted font-weight-normal small">Max:
-                                        <strong><?= $weights['application_edu'] ?></strong></span>
-                                </label>
-                                <input type="number" step="0.001" min="0" max="<?= $weights['application_edu'] ?>"
-                                    data-max="<?= $weights['application_edu'] ?>" class="form-control score-input"
-                                    id="application_of_education_score" name="application_of_education_score"
-                                    value="<?= e(number_format($score['application_of_education_score'] ?? 0, 3, '.', '')) ?>"
-                                    required>
-                            </div>
-                            <div class="form-group">
-                                <label for="application_of_ld_score"
-                                    class="font-weight-bold text-dark mb-0 d-flex justify-content-between">
-                                    <span>Application of L and D</span>
-                                    <span class="text-muted font-weight-normal small">Max:
-                                        <strong><?= $weights['application_ld'] ?></strong></span>
-                                </label>
-                                <input type="number" step="0.001" min="0" max="<?= $weights['application_ld'] ?>"
-                                    data-max="<?= $weights['application_ld'] ?>" class="form-control score-input"
-                                    id="application_of_ld_score" name="application_of_ld_score"
-                                    value="<?= e(number_format($score['application_of_ld_score'] ?? 0, 3, '.', '')) ?>"
-                                    required>
-                            </div>
+                            <div class="col-xl-6 col-md-12 col-sm-12">
+                                <h6 class="font-weight-bold text-gray-800 mb-3">Application of L and D</h6>
+                                <div class="form-group">
+                                    <label for="application_of_education_score"
+                                        class="font-weight-bold text-dark mb-0 d-flex justify-content-between">
+                                        <span>Application of Education</span>
+                                        <span class="text-muted font-weight-normal small">Max:
+                                            <strong><?= $weights['application_edu'] ?></strong></span>
+                                    </label>
+                                    <input type="number" step="0.001" min="0" max="<?= $weights['application_edu'] ?>"
+                                        data-max="<?= $weights['application_edu'] ?>" class="form-control score-input"
+                                        id="application_of_education_score" name="application_of_education_score"
+                                        value="<?= e(number_format($score['application_of_education_score'] ?? 0, 3, '.', '')) ?>"
+                                        required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="application_of_ld_score"
+                                        class="font-weight-bold text-dark mb-0 d-flex justify-content-between">
+                                        <span>Application of L and D</span>
+                                        <span class="text-muted font-weight-normal small">Max:
+                                            <strong><?= $weights['application_ld'] ?></strong></span>
+                                    </label>
+                                    <input type="number" step="0.001" min="0" max="<?= $weights['application_ld'] ?>"
+                                        data-max="<?= $weights['application_ld'] ?>" class="form-control score-input"
+                                        id="application_of_ld_score" name="application_of_ld_score"
+                                        value="<?= e(number_format($score['application_of_ld_score'] ?? 0, 3, '.', '')) ?>"
+                                        required>
+                                </div>
 
-                            <h6 class="font-weight-bold text-gray-800 mt-4 mb-2">Potential Raw Points
-                                <span class="text-muted font-weight-normal small ml-1">(Max Combined:
-                                    <strong><?= $weights['potential'] ?></strong>)</span>
-                            </h6>
-                            <small class="text-muted d-block mb-2">Individual raw points — their sum is capped at
-                                <strong><?= $weights['potential'] ?></strong>.</small>
-                            <div class="row">
-                                <div class="col-md-4 form-group">
-                                    <label for="potential_written_exam_raw" class="mb-0 small">Written Test</label>
-                                    <input type="number" step="0.001" min="0" max="<?= $weights['potential'] ?>"
-                                        data-max="<?= $weights['potential'] ?>"
-                                        class="form-control score-input potential-raw" id="potential_written_exam_raw"
-                                        name="potential_written_exam_raw"
-                                        value="<?= e(number_format($score['potential_written_exam_raw'] ?? 0, 3, '.', '')) ?>"
-                                        required>
-                                </div>
-                                <div class="col-md-4 form-group">
-                                    <label for="potential_bei_raw" class="mb-0 small">BEI</label>
-                                    <input type="number" step="0.001" min="0" max="<?= $weights['potential'] ?>"
-                                        data-max="<?= $weights['potential'] ?>"
-                                        class="form-control score-input potential-raw" id="potential_bei_raw"
-                                        name="potential_bei_raw"
-                                        value="<?= e(number_format($score['potential_bei_raw'] ?? 0, 3, '.', '')) ?>"
-                                        required>
-                                </div>
-                                <div class="col-md-4 form-group">
-                                    <label for="potential_wst_raw" class="mb-0 small">WST</label>
-                                    <input type="number" step="0.001" min="0" max="<?= $weights['potential'] ?>"
-                                        data-max="<?= $weights['potential'] ?>"
-                                        class="form-control score-input potential-raw" id="potential_wst_raw"
-                                        name="potential_wst_raw"
-                                        value="<?= e(number_format($score['potential_wst_raw'] ?? 0, 3, '.', '')) ?>"
-                                        required>
+                                <h6 class="font-weight-bold text-gray-800 mt-4 mb-2">Potential Raw Points
+                                    <span class="text-muted font-weight-normal small ml-1">(Max Combined:
+                                        <strong><?= $weights['potential'] ?></strong>)</span>
+                                </h6>
+                                <small class="text-muted d-block mb-2">Individual raw points — their sum is capped at
+                                    <strong><?= $weights['potential'] ?></strong>.</small>
+                                <div class="row">
+                                    <div class="col-md-4 form-group">
+                                        <label for="potential_written_exam_raw" class="mb-0 small">Written Test</label>
+                                        <input type="number" step="0.001" min="0" max="<?= $weights['potential'] ?>"
+                                            data-max="<?= $weights['potential'] ?>"
+                                            class="form-control score-input potential-raw" id="potential_written_exam_raw"
+                                            name="potential_written_exam_raw"
+                                            value="<?= e(number_format($score['potential_written_exam_raw'] ?? 0, 3, '.', '')) ?>"
+                                            required>
+                                    </div>
+                                    <div class="col-md-4 form-group">
+                                        <label for="potential_bei_raw" class="mb-0 small">BEI</label>
+                                        <input type="number" step="0.001" min="0" max="<?= $weights['potential'] ?>"
+                                            data-max="<?= $weights['potential'] ?>"
+                                            class="form-control score-input potential-raw" id="potential_bei_raw"
+                                            name="potential_bei_raw"
+                                            value="<?= e(number_format($score['potential_bei_raw'] ?? 0, 3, '.', '')) ?>"
+                                            required>
+                                    </div>
+                                    <div class="col-md-4 form-group">
+                                        <label for="potential_wst_raw" class="mb-0 small">WST</label>
+                                        <input type="number" step="0.001" min="0" max="<?= $weights['potential'] ?>"
+                                            data-max="<?= $weights['potential'] ?>"
+                                            class="form-control score-input potential-raw" id="potential_wst_raw"
+                                            name="potential_wst_raw"
+                                            value="<?= e(number_format($score['potential_wst_raw'] ?? 0, 3, '.', '')) ?>"
+                                            required>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
+                        <?php endif; ?>
                     </div>
 
                     <div class="row">
-                        <div class="col-md-6 form-group">
-                            <label for="potential_final_score"
-                                class="font-weight-bold text-dark mb-0 d-flex justify-content-between">
-                                <span>Potential Final Points</span>
-                                <span class="text-muted font-weight-normal small">Max:
-                                    <strong><?= $weights['potential'] ?></strong></span>
-                            </label>
-                            <input type="number" step="0.001" min="0" max="<?= $weights['potential'] ?>"
-                                data-max="<?= $weights['potential'] ?>" class="form-control bg-light font-weight-bold"
-                                id="potential_final_score" name="potential_final_score"
-                                value="<?= e(number_format($score['potential_final_score'] ?? 0, 3, '.', '')) ?>"
-                                required readonly>
-                            <small class="form-text text-muted font-italic">Auto calculated (Written + BEI + WST),
-                                capped at <?= $weights['potential'] ?></small>
-                        </div>
-                        <div class="col-md-6 form-group">
+                        <?php if (!$isTeacher2to3orMT && !$isTeacher1): ?>
+                            <div class="col-md-6 form-group">
+                                <label for="potential_final_score"
+                                    class="font-weight-bold text-dark mb-0 d-flex justify-content-between">
+                                    <span>Potential Final Points</span>
+                                    <span class="text-muted font-weight-normal small">Max:
+                                        <strong><?= $weights['potential'] ?></strong></span>
+                                </label>
+                                <input type="number" step="0.001" min="0" max="<?= $weights['potential'] ?>"
+                                    data-max="<?= $weights['potential'] ?>" class="form-control bg-light font-weight-bold"
+                                    id="potential_final_score" name="potential_final_score"
+                                    value="<?= e(number_format($score['potential_final_score'] ?? 0, 3, '.', '')) ?>"
+                                    required readonly>
+                                <small class="form-text text-muted font-italic">Auto calculated (Written + BEI + WST),
+                                    capped at <?= $weights['potential'] ?></small>
+                            </div>
+                        <?php endif; ?>
+                        <div class="<?= (!$isTeacher2to3orMT && !$isTeacher1) ? 'col-md-6' : 'col-md-12' ?> form-group">
                             <label for="total_accumulated_score"
                                 class="font-weight-bold text-gray-800 mb-0 d-flex justify-content-between">
                                 <span>Total Accumulated Points</span>
@@ -495,18 +700,9 @@ messageAlert($showAlert, $message, $success);
                     foreach ($otherApplications as $otherApp) {
                         $otherSG = (int) $otherApp['salary_grade'];
                         $otherCategory = $otherApp['category'];
+                        $otherTitle = $otherApp['official_title'];
 
-                        if ($otherSG >= 1 && $otherSG <= 9) {
-                            $otherSgLabel = stripos($otherCategory, 'general service') !== false
-                                ? 'SG 1-9 (General Services)'
-                                : 'SG 1-9 (Non-General Services)';
-                        } elseif ($otherSG >= 10 && $otherSG <= 22) {
-                            $otherSgLabel = 'SG 10-22';
-                        } elseif ($otherSG == 24) {
-                            $otherSgLabel = 'SG 24 (Chief Positions)';
-                        } else {
-                            $otherSgLabel = 'SG 10-22';
-                        }
+                        $otherSgLabel = getScoringCategoryLabel($otherSG, $otherCategory, $otherTitle);
 
                         if ($otherSgLabel === $sgLabel) {
                             // Check for existing score
@@ -571,12 +767,10 @@ messageAlert($showAlert, $message, $success);
         const MAX_POTENTIAL = <?= $weights['potential'] ?>;
         const MAX_TOTAL = <?= $weights['total'] ?>;
 
-        // Clamp a value to [0, max]
         function clamp(val, max) {
             return Math.min(Math.max(val, 0), max);
         }
 
-        // Enforce per-input max on blur/change (highlight if over max)
         function enforceMax(input) {
             const max = parseFloat(input.dataset.max);
             if (isNaN(max)) return;
@@ -589,15 +783,16 @@ messageAlert($showAlert, $message, $success);
         }
 
         function getVal(id) {
-            return parseFloat(document.getElementById(id).value) || 0;
+            const el = document.getElementById(id);
+            return el ? (parseFloat(el.value) || 0) : 0;
         }
 
         const examInput = document.getElementById('potential_written_exam_raw');
         const beiInput = document.getElementById('potential_bei_raw');
         const wstInput = document.getElementById('potential_wst_raw');
 
-        // Dynamically update each raw field's max to MAX_POTENTIAL minus the other two
         function updateRawMaxValues() {
+            if (!examInput || !beiInput || !wstInput) return;
             const exam = getVal('potential_written_exam_raw');
             const bei = getVal('potential_bei_raw');
             const wst = getVal('potential_wst_raw');
@@ -627,16 +822,30 @@ messageAlert($showAlert, $message, $success);
             const appEdu = clamp(getVal('application_of_education_score'), <?= $weights['application_edu'] ?>);
             const appLd = clamp(getVal('application_of_ld_score'), <?= $weights['application_ld'] ?>);
 
+            const pbet = clamp(getVal('pbet_let_lept_score'), <?= $weights['pbet_let_lept'] ?>);
+            const ppstCot = clamp(getVal('ppst_cot_score'), <?= $weights['ppst_cot'] ?>);
+            const ppstRef = clamp(getVal('ppst_reflection_score'), <?= $weights['ppst_reflection'] ?>);
+            const ppst = clamp(getVal('ppst_score'), <?= $weights['ppst'] > 0 ? $weights['ppst'] : $weights['ppst_cot'] ?>);
+            const bei = clamp(getVal('bei_score'), <?= $weights['bei'] > 0 ? $weights['bei'] : $weights['potential'] ?>);
+
             const exam = getVal('potential_written_exam_raw');
-            const bei = getVal('potential_bei_raw');
+            const beiRaw = getVal('potential_bei_raw');
             const wst = getVal('potential_wst_raw');
 
-            // Potential final is sum of raw scores, capped at the potential max
-            const potFinal = clamp(exam + bei + wst, MAX_POTENTIAL);
-            potentialFinalInput.value = potFinal.toFixed(3);
-
-            const total = clamp(edu + tra + exp + perf + acc + appEdu + appLd + potFinal, MAX_TOTAL);
-            totalAccumulatedInput.value = total.toFixed(3);
+            <?php if ($isTeacher2to3orMT): ?>
+                if (potentialFinalInput) potentialFinalInput.value = bei.toFixed(3);
+                const total = clamp(edu + tra + exp + perf + ppst + bei, MAX_TOTAL);
+                totalAccumulatedInput.value = total.toFixed(3);
+            <?php elseif ($isTeacher1): ?>
+                if (potentialFinalInput) potentialFinalInput.value = (0).toFixed(3);
+                const total = clamp(edu + tra + exp + pbet + ppstCot + ppstRef, MAX_TOTAL);
+                totalAccumulatedInput.value = total.toFixed(3);
+            <?php else: ?>
+                const potFinal = clamp(exam + beiRaw + wst, MAX_POTENTIAL);
+                if (potentialFinalInput) potentialFinalInput.value = potFinal.toFixed(3);
+                const total = clamp(edu + tra + exp + perf + acc + appEdu + appLd + potFinal, MAX_TOTAL);
+                totalAccumulatedInput.value = total.toFixed(3);
+            <?php endif; ?>
         }
 
         scoreInputs.forEach(input => {

@@ -39,7 +39,8 @@ if ($document) {
 
                     <div class="form-group">
                         <label for="type" class="mb-0">Type</label>
-                        <input id="type" class="form-control text-uppercase" value="<?= documentType($type) ?>" disabled>
+                        <input id="type" class="form-control text-uppercase" value="<?= documentType($type)['name'] ?>"
+                            disabled>
                     </div>
 
                     <div class="form-group">
