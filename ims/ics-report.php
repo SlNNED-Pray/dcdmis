@@ -58,9 +58,16 @@ if ($stockCardFilter !== '') {
     $rows = array_values(array_filter($rows, static function (array $row) use ($stockCardFilter): bool {
         $label = $row['stock_no'] . ' - ' . $row['description'];
         return stripos($label, $stockCardFilter) !== false
-            || stripos($row['stock_no'], $stockCardFilter) !== false;
+            || stripos($row['stock_no'], $stockCardFilter) !== false
+            || stripos($row['personnel'], $stockCardFilter) !== false
+            || stripos($row['office'], $stockCardFilter) !== false;
     }));
 }
+$filterOptions = array_values(array_unique(array_merge(
+    array_filter(array_column($rows, 'personnel')),
+    array_filter(array_column($rows, 'office')),
+    array_filter(array_column($rows, 'stock_no'))
+)));
 $icsCount = count($rows);
 $sumAmount = array_sum(array_map(static fn (array $row): float => $row['amount'], $rows));
 ?>
@@ -68,7 +75,10 @@ $sumAmount = array_sum(array_map(static fn (array $row): float => $row['amount']
 	<form method="get" class="form-inline">
 		<input type="hidden" name="v" value="<?= e(cipher('Inventory Custodian Slip')) ?>">
 		<label class="mr-2" for="ics-filter">Search</label>
-		<input class="form-control mr-2" id="ics-filter" name="filter" value="<?= e($stockCardFilter) ?>" placeholder="Stock no. or description" autocomplete="off">
+		<input class="form-control mr-2" id="ics-filter" name="filter" value="<?= e($stockCardFilter) ?>" list="ics-filter-options" placeholder="Personnel, office, stock no., or item" autocomplete="off">
+		<datalist id="ics-filter-options">
+			<?php foreach ($filterOptions as $option): ?><option value="<?= e($option) ?>"></option><?php endforeach; ?>
+		</datalist>
 		<button class="btn btn-primary" type="submit"><i class="fas fa-filter"></i> Filter</button>
 		<a class="btn btn-outline-secondary ml-2" href="<?= customUri('ims', 'Inventory Custodian Slip') ?>">Clear</a>
 	</form>

@@ -3,7 +3,7 @@ require_once(__DIR__ . '/navigation.php');
 require_once(root() . '/ims/helpers.php');
 
 $pdo = connection();
-$employees = $pdo->query("SELECT id, CONCAT(first_name, ' ', IFNULL(CONCAT(middle_name, ' '), ''), last_name, IFNULL(CONCAT(', ', name_extension), '')) AS name FROM employees ORDER BY last_name, first_name")->fetchAll();
+$employees = $pdo->query("SELECT id, CONCAT(last_name, ', ', first_name, IFNULL(CONCAT(' ', middle_name), ''), IFNULL(CONCAT(' ', name_extension), '')) AS name FROM employees ORDER BY last_name, first_name")->fetchAll();
 $functionalDivisions = $pdo->query("SELECT id, name FROM functional_divisions ORDER BY name")->fetchAll();
 $items = $pdo->query('SELECT id, stock_no, description, unit, quantity, min_qty, pcs_per_unit, total_units FROM items ORDER BY description')->fetchAll();
 $itemUnits = $pdo->query('SELECT item_id, unit, pcs_per_unit FROM item_units ORDER BY item_id')->fetchAll();
@@ -44,7 +44,10 @@ $itemJson = json_encode(array_map(static function ($item) use ($unitsMap) {
         'total_units' => (int) $item['total_units'],
     ];
 }, $items), JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
-$employeeJson = json_encode(array_map(static function ($e) { return ['id' => (int) $e['id'], 'name' => $e['name'], 'office' => risDivisionOfficeFromEmployee((int) $e['id'])['office']]; }, $employees), JSON_UNESCAPED_UNICODE);
+$employeeJson = json_encode(array_map(static function ($e) {
+    $dinfo = risDivisionOfficeFromEmployee((int) $e['id']);
+    return ['id' => (int) $e['id'], 'name' => $e['name'], 'division' => $dinfo['division'], 'office' => $dinfo['office']];
+}, $employees), JSON_UNESCAPED_UNICODE);
 $selectedEmployee = (int) ($_POST['employee_id'] ?? 0);
 $fromItemId = (int) (decode($_GET['id'] ?? '') ?: 0);
 $selectedItems = $_POST['item_id'] ?? [];
@@ -62,16 +65,18 @@ if (!is_array($quantities)) {
     $quantities = [$quantities];
 }
 $purpose = trim($_POST['purpose'] ?? '');
-messageAlert($showAlert ?? false, $message ?? '', $success ?? true);
-contentTitle('Create Requisition Slip');
-imsNav('ris');
+$openModal = isset($_POST['save-ris']) || $url === 'Create RIS';
 ?>
-<div class="card shadow mb-4" style="max-width:860px;"><div class="card-header"><strong>New requisition slip</strong></div><div class="card-body">
-<?php if (!empty($message) && empty($success)): ?>
-	<?php messageAlert(true, e($message), false); ?>
-<?php endif; ?>
-<form method="post">
-<?= csrf_field(); ?>
+<div class="modal fade" id="risModal" tabindex="-1" role="dialog" aria-labelledby="risModalLabel" aria-hidden="true">
+	<div class="modal-dialog modal-lg" role="document">
+		<div class="modal-content">
+			<form method="post">
+				<?= csrf_field(); ?>
+				<div class="modal-header">
+					<h5 class="modal-title" id="risModalLabel"><i class="fas fa-file-invoice"></i> New requisition slip</h5>
+					<button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+				</div>
+				<div class="modal-body">
 <?php
 $selectedEmployeeName = '';
 if ($selectedEmployee > 0) {
@@ -85,16 +90,13 @@ if ($selectedEmployee > 0) {
     <ul class="emp-suggestions dropdown-menu" style="display:none;left:0;right:0;top:100%;position:absolute;max-height:220px;overflow:auto;z-index:1000;"></ul>
 </div>
 <?php $selectedDivision = trim((string) ($_POST['division'] ?? '')); ?>
-<?php $prefillOffice = $selectedEmployee > 0 ? risDivisionOfficeFromEmployee($selectedEmployee)['office'] : ''; ?>
+<?php $employeeDinfo = $selectedEmployee > 0 ? risDivisionOfficeFromEmployee($selectedEmployee) : ['division' => '', 'office' => '']; ?>
+<?php if ($selectedDivision === '' && !empty($employeeDinfo['division'])) { $selectedDivision = $employeeDinfo['division']; } ?>
+<?php $prefillOffice = $employeeDinfo['office']; ?>
 <div class="form-row">
     <div class="form-group col-md-6">
         <label>Division</label>
-        <select class="form-control" name="division" required>
-            <option value="">Select Division</option>
-            <?php foreach ($functionalDivisions as $fd): ?>
-                <option value="<?= e($fd['name']) ?>" <?= $fd['name'] === $selectedDivision ? 'selected' : '' ?>><?= e($fd['name']) ?></option>
-            <?php endforeach; ?>
-        </select>
+        <input class="form-control" type="text" name="division" value="<?= e($selectedDivision) ?>" readonly required placeholder=" ">
     </div>
     <div class="form-group col-md-6">
         <label>Office</label>
@@ -152,10 +154,15 @@ if ($selectedEmployee > 0) {
 </div>
 
 <div class="form-group"><label>Purpose</label><textarea class="form-control" name="purpose" rows="3" required><?= e($purpose) ?></textarea></div>
-<button class="btn btn-primary" type="submit" name="save-ris"><i class="fas fa-save"></i> Submit RIS</button>
-<a class="btn btn-secondary" href="<?= customUri('ims', 'Requisition Slips') ?>">Cancel</a>
-</form>
-</div></div>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+					<button class="btn btn-primary" type="submit" name="save-ris"><i class="fas fa-save"></i> Submit RIS</button>
+				</div>
+			</form>
+		</div>
+	</div>
+</div>
 
 <script>
 const ITEMS = <?= $itemJson ?: '[]' ?>;
@@ -333,7 +340,7 @@ document.addEventListener('click', function (e) {
             var li = document.createElement('li');
             li.className = 'dropdown-item';
             li.setAttribute('role', 'option');
-            li.textContent = e.name;
+            li.innerHTML = esc(e.name) + (e.division ? ' <small class="text-muted">(' + esc(e.division) + ')</small>' : '');
             li.addEventListener('mousedown', function (ev) {
                 ev.preventDefault();
                 input.value = e.name;
@@ -347,8 +354,16 @@ document.addEventListener('click', function (e) {
     }
     function updateOfficeDisplay(empId) {
         var officeEl = document.querySelector('.ris-office-display');
+        var divInput = document.querySelector('[name="division"]');
         var emp = EMPLOYEES.filter(function (e) { return String(e.id) === String(empId); })[0];
         if (officeEl) officeEl.value = emp ? (emp.office || '') : '';
+        if (divInput) {
+            if (emp && emp.division) {
+                divInput.value = emp.division;
+            } else if (!emp) {
+                divInput.value = '';
+            }
+        }
     }
     function hideResults() { list.style.display = 'none'; }
     input.addEventListener('input', function () { hidden.value = ''; updateOfficeDisplay(0); showResults(); });
@@ -363,3 +378,6 @@ document.addEventListener('click', function (e) {
     });
 })();
 </script>
+<?php if ($openModal): ?>
+<script>document.addEventListener('DOMContentLoaded', function () { if (window.jQuery && jQuery.fn.modal) { jQuery('#risModal').modal('show'); } });</script>
+<?php endif; ?>

@@ -13,6 +13,16 @@ if (!$itemRecord) {
 }
 $itemUnits = query('SELECT * FROM item_units WHERE item_id = ? ORDER BY FIELD(unit, "bottle","gallon","piece","unit","pack","can","pouch","bundle","roll","tube","pad","box","ream","book","cart","license","ticket","lot","set"), unit', [$itemId]);
 
+$priceHistory = query(
+    "SELECT h.id, h.price_date, h.old_cost, h.new_cost, h.reference, h.remarks,
+            CONCAT(e.first_name, ' ', e.last_name) AS recorded_by
+     FROM item_cost_history h
+     LEFT JOIN employees e ON e.id = h.created_by
+     WHERE h.item_id = ?
+     ORDER BY h.price_date DESC, h.id DESC",
+    [$itemId]
+);
+
 $savedId = (int) sanitize(decipher($_POST['item_id'] ?? ''));
 $submitting = isset($_POST['save-item']);
 $item = [
@@ -125,6 +135,33 @@ messageAlert($showAlert ?? false, $message ?? '', $success ?? true);
             <div class="form-group col-md-3 mb-0"><label>Pieces per unit</label><input class="form-control" type="number" min="1" name="new_pcs" value="1"></div>
             <div class="form-group col-md-5 mb-0"><button class="btn btn-outline-primary" type="submit" name="add-item-unit"><i class="fas fa-plus"></i> Add unit</button></div>
         </form>
+    </div>
+</div>
+
+<div class="card shadow mb-4" style="max-width:940px;">
+    <div class="card-header"><strong>Price history</strong> <small class="text-muted">(all unit cost changes for this item)</small></div>
+    <div class="card-body">
+        <?php if (empty($priceHistory)): ?><p class="text-muted">No price changes recorded yet.</p><?php endif; ?>
+        <table class="table table-sm">
+            <thead><tr><th>Date</th><th>Previous</th><th>New</th><th>Change</th><th>Reference</th><th>Recorded By</th></tr></thead>
+            <tbody>
+            <?php foreach ($priceHistory as $ph): ?>
+                <?php $phChange = (float) $ph['new_cost'] - (float) $ph['old_cost']; ?>
+                <tr>
+                    <td><?= e($ph['price_date']) ?></td>
+                    <td><?= 'P' . number_format((float) $ph['old_cost'], 2) ?></td>
+                    <td><?= 'P' . number_format((float) $ph['new_cost'], 2) ?></td>
+                    <td>
+                        <?php if ($phChange > 0): ?><span class="text-danger">+<?= 'P' . number_format($phChange, 2) ?></span>
+                        <?php elseif ($phChange < 0): ?><span class="text-success">-<?= 'P' . number_format(abs($phChange), 2) ?></span>
+                        <?php else: ?>—<?php endif; ?>
+                    </td>
+                    <td><?= e($ph['reference']) ?></td>
+                    <td><?= e($ph['recorded_by'] ?: '—') ?></td>
+                </tr>
+            <?php endforeach; ?>
+            </tbody>
+        </table>
     </div>
 </div>
 <script>

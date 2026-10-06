@@ -8,6 +8,7 @@ require_once(root() . '/includes/database/position.php');
 require_once(root() . '/includes/database/section.php');
 require_once(root() . '/includes/database/school.php');
 require_once(root() . '/ims/helpers.php');
+requireImsStaff();
 $pdo = connection();
 
 $issuedId = (int) (decode($_GET['issued_id'] ?? '') ?: 0);
@@ -49,12 +50,11 @@ if ($viewMode) {
     }, $employees), JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
 
     $filter = trim($_GET['filter'] ?? '');
-    $WHERE = $filter !== '' ? " AND (stock_no LIKE " . $pdo->quote("%$filter%") . " OR description LIKE " . $pdo->quote("%$filter%") . ")" : '';
     $items = $pdo->query(
         "SELECT id, stock_no, description, unit, unit_cost, quantity, min_qty, remarks,
                 personnel, office, item_status, transfer_to
          FROM items
-         WHERE unit_cost >= 30000{$WHERE}
+         WHERE unit_cost >= 30000
          ORDER BY description ASC"
     )->fetchAll();
 
@@ -95,6 +95,16 @@ if ($viewMode) {
         ];
     }, $items);
 
+    $lines = array_values(array_filter($lines, static function (array $line) use ($filter): bool {
+        if ($filter === '') {
+            return true;
+        }
+        $label = $line['item_no'] . ' - ' . $line['description'];
+        return stripos($label, $filter) !== false
+            || stripos($line['item_no'], $filter) !== false
+            || stripos($line['personnel'], $filter) !== false
+            || stripos($line['office'], $filter) !== false;
+    }));
     $lines = array_values($lines);
     $sumAmount = array_sum(array_map(static fn (array $line): float => $line['amount'], $lines));
 }
@@ -197,7 +207,7 @@ body { font:11pt "Times New Roman", Times, serif; color:#111; background:#f0f0f0
 		</tr>
 	</table>
 
-	<table class="ics-table">
+	<table class="ics-table" id="ics-table">
 		<thead>
 			<tr>
 				<th>Quantity</th>
@@ -220,7 +230,14 @@ body { font:11pt "Times New Roman", Times, serif; color:#111; background:#f0f0f0
 		</thead>
 		<tbody>
 			<?php if (!$lines): ?>
-				<tr><td colspan="6" style="text-align:center;color:#777;">No items with a unit cost of P30,000 or more.</td></tr>
+				<tr>
+					<td>&nbsp;</td>
+					<td>&nbsp;</td>
+					<td>&nbsp;</td>
+					<td class="desc">&nbsp;</td>
+					<td>&nbsp;</td>
+					<td>&nbsp;</td>
+				</tr>
 			<?php endif; ?>
 			<?php foreach ($lines as $i => $line): ?>
 				<?php if ($viewMode): ?>
@@ -246,7 +263,7 @@ body { font:11pt "Times New Roman", Times, serif; color:#111; background:#f0f0f0
 	<table class="ics-total">
 		<tr>
 			<td><strong>Unit Cost:</strong> per item listed above</td>
-			<td><strong>Total Cost:</strong> <?= e(count($lines) > 0 ? 'P' . number_format($sumAmount, 2) : '') ?></td>
+			<td><strong>Total Cost:</strong> <?= e('P' . number_format($sumAmount, 2)) ?></td>
 		</tr>
 	</table>
 
@@ -257,27 +274,31 @@ body { font:11pt "Times New Roman", Times, serif; color:#111; background:#f0f0f0
 		</tr>
 		<tr>
 			<td>
-				<div class="line" id="recv-name"><?= $viewMode ? e((string) $issued['received_from']) : '' ?></div>
+				<div class="line" id="recv-name" style="text-align: center;"><?= $viewMode ? e((string) $issued['received_from']) : '' ?></div>
 				<div class="sub">Name of Personnel</div>
-				<div class="line" id="recv-signature"><?= $viewMode ? e((string) $issued['received_from_signature']) : '' ?></div>
+				<div class="line" id="recv-signature" style="text-align: center;"><?= $viewMode ? e((string) $issued['received_from_signature']) : '' ?></div>
 				<div class="sub">Signature Over Printed Name</div>
-				<div class="line" id="recv-position"><?= $viewMode ? e((string) $issued['received_from_position']) : '' ?></div>
+				<div class="line" id="recv-position" style="text-align: center;"><?= $viewMode ? e((string) $issued['received_from_position']) : '' ?></div>
 				<div class="sub">Position/Office</div>
-				<div class="line" id="recv-date"><?= $viewMode ? e(date('F j, Y', strtotime((string) $issued['ics_date']))) : '' ?></div>
+				<div class="line" id="recv-date" style="text-align: center;"><?= $viewMode ? e(date('F j, Y', strtotime((string) $issued['ics_date']))) : '' ?></div>
 				<div class="sub">Date</div>
 			</td>
 			<td>
-				<div class="line" id="recvby-name"><?= $viewMode ? e((string) $issued['received_by']) : '' ?></div>
+				<div class="line" id="recvby-name" style="text-align: center;"><?= $viewMode ? e((string) $issued['received_by']) : '' ?></div>
 				<div class="sub">Name of Personnel</div>
-				<div class="line" id="recvby-signature"><?= $viewMode ? e((string) $issued['received_by_signature']) : '' ?></div>
+				<div class="line" id="recvby-signature" style="text-align: center;"><?= $viewMode ? e((string) $issued['received_by_signature']) : '' ?></div>
 				<div class="sub">Signature Over Printed Name</div>
-				<div class="line" id="recvby-position"><?= $viewMode ? e((string) $issued['received_by_position']) : '' ?></div>
+				<div class="line" id="recvby-position" style="text-align: center;"><?= $viewMode ? e((string) $issued['received_by_position']) : '' ?></div>
 				<div class="sub">Position/Office</div>
-				<div class="line" id="recvby-date"><?= $viewMode ? e(date('F j, Y', strtotime((string) $issued['ics_date']))) : '' ?></div>
+				<div class="line" id="recvby-date" style="text-align: center;"><?= $viewMode ? e(date('F j, Y', strtotime((string) $issued['ics_date']))) : '' ?></div>
 				<div class="sub">Date</div>
 			</td>
 		</tr>
 	</table>
+
+	<div style="text-align:center; margin-top:12px;">
+		<img src="image/footer.png" alt="Footer" style="width:100%; max-width:210mm; height:auto; display:block; margin:0 auto;">
+	</div>
 </div>
 
 <?php if (!$viewMode): ?>

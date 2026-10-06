@@ -7,6 +7,8 @@ require_once(root() . '/includes/database/employee.php');
 require_once(root() . '/includes/database/utility.php');
 require_once(root() . '/ims/helpers.php');
 
+requireImsStaff();
+
 $pdo = connection();
 $prId = (int) (decode($_GET['pr_id'] ?? '') ?: 0);
 $pr = $prId > 0 ? find(

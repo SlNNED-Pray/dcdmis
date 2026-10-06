@@ -16,6 +16,9 @@ require_once(root() . '/includes/database/employee.php');
 require_once(root() . '/includes/database/utility.php');
 require_once(root() . '/includes/database/school.php');
 require_once(root() . '/includes/database/section.php');
+require_once(root() . '/ims/helpers.php');
+
+requireImsStaff();
 
 // Open the shared database connection.
 $pdo = connection();

@@ -10,7 +10,7 @@ imsNav('inventory');
 <div class="card shadow mb-4">
     <div class="card-header d-flex justify-content-between align-items-center">
         <strong>Stock items</strong>
-        <a class="btn btn-primary btn-sm" href="<?= customUri('ims', 'Create Stock Item') ?>"><i class="fas fa-plus"></i> Add item</a>
+        <button type="button" class="btn btn-primary btn-sm" data-toggle="modal" data-target="#itemModal"><i class="fas fa-plus"></i> Add item</button>
     </div>
     <div class="card-body">
         <div class="table-responsive">
@@ -40,3 +40,5 @@ imsNav('inventory');
         </div>
     </div>
 </div>
+
+<?php require_once(__DIR__ . '/item-create.php'); ?>

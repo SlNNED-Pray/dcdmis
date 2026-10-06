@@ -36,11 +36,6 @@ $items = array_values(array_filter($items, static function ($it): bool {
     return is_array($it) && (int) ($it['item_id'] ?? 0) > 0;
 }));
 
-if (empty($items)) {
-    echo json_encode(['success' => false, 'error' => 'NO_ITEMS', 'message' => 'Please include at least one item.']);
-    exit;
-}
-
 if ($icsNo === '') {
     $icsNo = imsNextDocumentNumber('ICS', 'issued_ics', 'ics_no');
 }

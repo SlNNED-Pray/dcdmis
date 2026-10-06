@@ -126,6 +126,9 @@ if (!isset($url) || $url === 'dashboard') {
         case 'Purchase Order':
             $file = root() . '/ims/po.php';
             break;
+        case 'Booking Approvals':
+            $file = root() . '/bsa/booking-approvals.php';
+            break;
         case 'Request Transfer':
             $file = 'transfer-request/page';
             break;
