@@ -68,7 +68,7 @@ foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
     // these props instead of re-querying on click.
     $event['extendedProps'] = [
         'kind'    => 'booking',
-        'heading' => (string) $row['title'],
+        'heading' => (string) (!empty($row['facility']) ? $row['facility'] : $row['title']),
         'status'  => '',
         'details' => [
             'Event type' => (string) ($row['event_type'] ?: 'N/A'),
@@ -81,6 +81,11 @@ foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
 
     $events[] = $event;
 }
+
+// Approved facility-booking schedules share a navy -> maya blue range so the
+// calendar reads as one family; pending bookings stay amber.
+$approvedBlues = ['#000080', '#4169e1', '#1c39bb', '#73c2fb'];
+$approvedBlueIdx = 0;
 
 // Local standalone facility bookings (bsa_facility_bookings), colored by status.
 try {
@@ -108,11 +113,13 @@ try {
             'title'  => $title,
             'start'  => str_replace(' ', 'T', $startDt),
             'end'    => $endDt !== null ? str_replace(' ', 'T', $endDt) : null,
-            'color'  => $row['status'] === 'approved' ? '#1cc88a' : '#ffc107',
+            'color'  => $row['status'] === 'approved'
+                ? $approvedBlues[$approvedBlueIdx++ % count($approvedBlues)]
+                : '#ffc107',
             'allDay' => false,
             'extendedProps' => [
                 'kind'    => 'facility',
-                'heading' => (string) $row['activity_title'],
+                'heading' => (string) (!empty($row['venue_option']) ? $row['venue_option'] : $row['activity_title']),
                 'status'  => (string) $row['status'],
                 'details' => [
                     'Reference' => (string) ($row['booking_reference'] ?: 'N/A'),
@@ -145,11 +152,11 @@ try {
             'title'  => $row['activity_title'] . ' (' . $row['booking_reference'] . ')',
             'start'  => str_replace(' ', 'T', date('Y-m-d H:i:s', strtotime($row['start_date'] . ' ' . $row['start_time']))),
             'end'    => str_replace(' ', 'T', date('Y-m-d H:i:s', strtotime($row['end_date'] . ' ' . $row['end_time']))),
-            'color'  => '#1cc88a',
+            'color'  => $approvedBlues[$approvedBlueIdx++ % count($approvedBlues)],
             'allDay' => false,
             'extendedProps' => [
                 'kind'    => 'dtc',
-                'heading' => (string) $row['activity_title'],
+                'heading' => (string) (!empty($row['venue_name']) ? $row['venue_name'] : (!empty($row['facility_name']) ? $row['facility_name'] : $row['activity_title'])),
                 'status'  => (string) $row['status'],
                 'details' => [
                     'Reference' => (string) ($row['booking_reference'] ?: 'N/A'),

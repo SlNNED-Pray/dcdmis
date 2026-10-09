@@ -50,8 +50,6 @@ $prefill = [
     <link rel="stylesheet" href="fonts/icomoon/style.css">
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <!-- DTC-SC booking form styles (shared layout) -->
-    <link rel="stylesheet" href="<?php echo uri(); ?>/dtcsc-booking/public/assets/css/style.css">
     <style>
         body { background: #f8f9fa; }
         .embed-wrap { max-width: 820px; margin: 0 auto; padding: 1.25rem; }
@@ -59,6 +57,18 @@ $prefill = [
         .form-head h2 { font-weight: 700; color: #212529; font-size: 1.4rem; margin-bottom: 0.25rem; }
         .form-head p { color: #6c757d; font-size: 0.85rem; margin: 0; }
         .form-head .control-no { font-weight: 600; color: #198754; font-size: 0.95rem; }
+        .booking-form-container { background: white; border-radius: 15px; box-shadow: 0 5px 20px rgba(0,0,0,0.08); padding: 1.5rem; }
+        .booking-progress .progress-bar { background-color: #198754; transition: width 0.3s ease; }
+        .step-indicators .step { color: #adb5bd; text-align: center; flex: 1; font-size: 0.75rem; font-weight: 600; }
+        .step-indicators .step.active { color: #198754; }
+        .step-indicators .step-number { background: #e9ecef; border-radius: 50%; display: inline-block; width: 24px; height: 24px; line-height: 24px; font-size: 0.75rem; margin-bottom: 2px; }
+        .step-indicators .step.active .step-number { background: #198754; color: white; }
+        .form-step { display: none; }
+        .form-step.active { display: block; }
+        .form-navigation { display: flex; justify-content: space-between; gap: 0.75rem; margin-top: 1.5rem; }
+        .booking-summary p { margin-bottom: 0.4rem; }
+        .success-message { text-align: center; padding: 2.5rem 1rem; }
+        .success-icon { font-size: 4rem; color: #198754; }
         .vehicle-type-options .form-check { border: 1px solid #dee2e6; border-radius: 10px; padding: 0.75rem 1rem; margin-bottom: 0.5rem; }
         .vehicle-type-options .form-check-input:checked ~ .form-check-label { font-weight: 600; color: #198754; }
     </style>

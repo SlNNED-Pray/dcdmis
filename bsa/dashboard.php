@@ -152,6 +152,7 @@ messageAlert($showAlert, $message, $success);
         </div>
     </div>
 </div>
+</div>
 
 <style>
 .fc-button.fc-button-primary {
@@ -175,6 +176,63 @@ messageAlert($showAlert, $message, $success);
 }
 /* Scheduled events open a details popup, so show a pointer on hover. */
 .fc-event.fc-clickable { cursor: pointer; }
+
+/* Every rounded surface on the BSA dashboard uses a 25px radius.
+   Bootstrap/SB Admin give each element its own value (.card .35rem,
+   .modal-content .3rem, .btn/.form-control/.alert/.badge .35rem,
+   .fc-event 3px), so all are overridden here. The #bsaDashboard wrapper
+   keeps the rules off the shared sidebar/topbar chrome. */
+#bsaDashboard .card,
+#bsaDashboard .alert,
+#bsaDashboard .modal-content,
+#bsaDashboard .btn,
+#bsaDashboard .form-control,
+#bsaDashboard .badge,
+#bsaDashboard .fc-button,
+#bsaDashboard .fc-event {
+    border-radius: 25px;
+}
+
+/* Headers and footers sit flush against the modal or card edge, so only
+   the corners that meet the container's outer edge are rounded — the
+   inner corners must stay square or they spill past the rounded parent. */
+#bsaDashboard .card-header:first-child,
+#bsaDashboard .modal-header {
+    border-top-left-radius: 25px;
+    border-top-right-radius: 25px;
+}
+#bsaDashboard .card-footer:last-child,
+#bsaDashboard .modal-footer {
+    border-bottom-left-radius: 25px;
+    border-bottom-right-radius: 25px;
+}
+
+/* FullCalendar joins the prev/next/today and Month/Week/Day buttons with
+   -1px margins. Its own rules zero the shared inner corners at a lower
+   specificity than the ID rule above, so restore them here — otherwise
+   every button in a group rounds on all four sides and the seams notch. */
+#bsaDashboard .fc-button-group > .fc-button:not(:last-child) {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+}
+#bsaDashboard .fc-button-group > .fc-button:not(:first-child) {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+}
+
+/* Remaining FullCalendar surfaces: the "more" popover (its header sits
+   flush against the popover edge, so only the top corners round), the
+   event resize handles, and the week-number cell. */
+#bsaDashboard .fc-popover,
+#bsaDashboard .fc-h-event.fc-selected .fc-resizer,
+#bsaDashboard .fc-time-grid-event.fc-selected .fc-resizer,
+#bsaDashboard .fc-dayGrid-view .fc-day-top .fc-week-number {
+    border-radius: 25px;
+}
+#bsaDashboard .fc-popover .fc-header {
+    border-top-left-radius: 25px;
+    border-top-right-radius: 25px;
+}
 </style>
 
 <link rel="stylesheet" href="<?= uri() ?>/bsa/fullcalendar/packages/core/main.css?v=<?= VERSION ?>">

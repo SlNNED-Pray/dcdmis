@@ -15,7 +15,8 @@ if (empty($GLOBALS['userId'] ?? null)) {
 ensureJobOrderTables();
 $csrfToken = csrf_token();
 $prefill = [
-    'date_request' => trim((string) ($_GET['date_request'] ?? date('Y-m-d'))),
+    'requesting_office' => '',
+    'date_request'      => trim((string) ($_GET['date_request'] ?? '')),
 ];
 ?>
 <!DOCTYPE html>
