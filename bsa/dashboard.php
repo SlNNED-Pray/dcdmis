@@ -152,7 +152,6 @@ messageAlert($showAlert, $message, $success);
         </div>
     </div>
 </div>
-</div>
 
 <style>
 .fc-button.fc-button-primary {
