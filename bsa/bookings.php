@@ -60,7 +60,8 @@ foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
         'JOB Order Request' => '#f6c23e',
     ];
     if (isset($typeColors[$row['event_type']])) {
-        $event['color'] = $typeColors[$row['event_type']];
+        $event['backgroundColor'] = $typeColors[$row['event_type']];
+        $event['borderColor'] = $typeColors[$row['event_type']];
     }
 
     // Detail rows shown in the calendar's click-through popup. The feed is the
@@ -108,14 +109,16 @@ try {
         if (!empty($row['venue_option'])) {
             $title .= ' - ' . $row['venue_option'];
         }
+        $localColor = $row['status'] === 'approved'
+            ? $approvedBlues[$approvedBlueIdx++ % count($approvedBlues)]
+            : '#ffc107';
         $events[] = [
             'id'     => 'bf' . (int) $row['id'],
             'title'  => $title,
             'start'  => str_replace(' ', 'T', $startDt),
             'end'    => $endDt !== null ? str_replace(' ', 'T', $endDt) : null,
-            'color'  => $row['status'] === 'approved'
-                ? $approvedBlues[$approvedBlueIdx++ % count($approvedBlues)]
-                : '#ffc107',
+            'backgroundColor' => $localColor,
+            'borderColor'     => $localColor,
             'allDay' => false,
             'extendedProps' => [
                 'kind'    => 'facility',
@@ -147,12 +150,14 @@ try {
         ORDER BY b.start_date ASC, b.start_time ASC
     ");
     foreach ($dtcStmt->fetchAll() as $row) {
+        $dtcColor = $approvedBlues[$approvedBlueIdx++ % count($approvedBlues)];
         $events[] = [
             'id'     => 'dtc' . (int) $row['booking_id'],
             'title'  => $row['activity_title'] . ' (' . $row['booking_reference'] . ')',
             'start'  => str_replace(' ', 'T', date('Y-m-d H:i:s', strtotime($row['start_date'] . ' ' . $row['start_time']))),
             'end'    => str_replace(' ', 'T', date('Y-m-d H:i:s', strtotime($row['end_date'] . ' ' . $row['end_time']))),
-            'color'  => $approvedBlues[$approvedBlueIdx++ % count($approvedBlues)],
+            'backgroundColor' => $dtcColor,
+            'borderColor'     => $dtcColor,
             'allDay' => false,
             'extendedProps' => [
                 'kind'    => 'dtc',
@@ -189,7 +194,7 @@ try {
         $endDt = $row['return_date'] !== null
             ? date('Y-m-d H:i:s', strtotime($row['return_date'] . ' ' . ($row['return_time'] ?? '00:00:00')))
             : null;
-        $title = trim($row['purpose_of_travel'] . ' (' . $row['control_no'] . ')');
+        $title = 'Vehicle Request (' . $row['control_no'] . ')';
         if (!empty($row['destination'])) {
             $title .= ' - ' . $row['destination'];
         }
@@ -198,11 +203,12 @@ try {
             'title'  => $title,
             'start'  => str_replace(' ', 'T', $startDt),
             'end'    => $endDt !== null ? str_replace(' ', 'T', $endDt) : null,
-            'color'  => '#fd7e14',
+            'backgroundColor' => '#fd7e14',
+            'borderColor'     => '#fd7e14',
             'allDay' => false,
             'extendedProps' => [
                 'kind'    => 'vehicle',
-                'heading' => (string) $row['purpose_of_travel'],
+                'heading' => 'Vehicle Request',
                 'status'  => 'available',
                 'details' => [
                     'Control no.' => (string) ($row['control_no'] ?: 'N/A'),
@@ -258,12 +264,13 @@ try {
             $tracking = 'work_in_progress';
         }
 
-        $title = $row['order_no'] . ' - ' . $workLabel;
+        $title = 'Job Order / Request - ' . $workLabel;
         if (!empty($row['location_of_work'])) {
             $title .= ' @ ' . $row['location_of_work'];
         }
 
-        $tooltip = $title . PHP_EOL
+        $tooltip = $row['order_no'] . PHP_EOL
+            . $title . PHP_EOL
             . 'Requestor: ' . ($row['requestor_name'] ?: 'N/A') . PHP_EOL
             . 'Tracking: ' . jobOrderTrackingRemarksLabel($tracking)
             . (!empty($row['date_time_completed'])
@@ -275,7 +282,8 @@ try {
             'title'     => preg_replace('/\s+/', ' ', $title),
             'start'     => $startDate,
             'allDay'    => true,
-            'color'     => $joColors[$tracking],
+            'backgroundColor' => $joColors[$tracking],
+            'borderColor'     => $joColors[$tracking],
             'url'       => uri() . '/bsa/?v=' . encode('Booking Approvals') . '&id=' . (int) $row['id'] . '&type=joborder',
             'tooltip'   => $tooltip,
             'extendedProps' => [
@@ -284,8 +292,9 @@ try {
                 'tracking' => $tracking,
                 'trackingLabel' => jobOrderTrackingRemarksLabel($tracking),
                 'status'   => 'approved',
-                'heading'  => (string) $row['order_no'],
+                'heading'  => 'Job Order / Request',
                 'details'  => [
+                    'Order No'   => (string) $row['order_no'],
                     'Requestor'  => (string) ($row['requestor_name'] ?: 'N/A'),
                     'Work'       => $workLabel ?: 'N/A',
                     'Location'   => (string) ($row['location_of_work'] ?: 'N/A'),

@@ -31,7 +31,7 @@ if ($id <= 0 || !in_array($action, $validActions, true)) {
 
 $db = connection();
 
-$stmt = $db->prepare("SELECT id, status FROM vehicle_requests WHERE id = ?");
+$stmt = $db->prepare("SELECT id, status, vehicle_type, depart_date, depart_time, return_date, return_time FROM vehicle_requests WHERE id = ?");
 $stmt->execute([$id]);
 $vehicle = $stmt->fetch();
 
@@ -45,6 +45,40 @@ if ($vehicle['status'] !== 'pending') {
     $_SESSION['vehicle_flash'] = ['type' => 'danger', 'message' => 'This vehicle request is not awaiting a decision.'];
     header('Location: ' . $listUrl . '&status=pending');
     exit;
+}
+
+if ($action === 'available') {
+    $endDate = $vehicle['return_date'] ?: $vehicle['depart_date'];
+    $endTime = $vehicle['return_time'] ?: '23:59';
+    $conflictStmt = $db->prepare("
+        SELECT control_no, status
+        FROM vehicle_requests
+        WHERE status IN ('pending', 'available')
+          AND id <> ?
+          AND vehicle_type = ?
+          AND CONCAT(depart_date, ' ', depart_time) < CONCAT(?, ' ', ?)
+          AND CONCAT(COALESCE(return_date, depart_date), ' ', COALESCE(return_time, '23:59')) > CONCAT(?, ' ', ?)
+        ORDER BY depart_date ASC, depart_time ASC
+    ");
+    $conflictStmt->execute([
+        $id,
+        $vehicle['vehicle_type'],
+        $endDate, $endTime,
+        $vehicle['depart_date'], $vehicle['depart_time'],
+    ]);
+    $overlaps = $conflictStmt->fetchAll();
+
+    if ($overlaps) {
+        $refs = array_map(function ($r) {
+            return htmlspecialchars($r['control_no']) . ' (' . ucfirst($r['status']) . ')';
+        }, $overlaps);
+        $_SESSION['vehicle_flash'] = [
+            'type' => 'danger',
+            'message' => 'Vehicle is not available. Select another Vehicle Type (conflicts with: ' . implode(', ', $refs) . ').'
+        ];
+        header('Location: ' . $listUrl . '&status=pending');
+        exit;
+    }
 }
 
 try {

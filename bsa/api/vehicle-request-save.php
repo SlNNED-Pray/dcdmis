@@ -69,6 +69,30 @@ if ($errors) {
     exit;
 }
 
+// Prevent double-booking: the same Vehicle Type must be free for the proposed trip.
+$conflictEndDate = $returnDate !== '' ? $returnDate : $departDate;
+$conflictEndTime = $returnTime !== '' ? $returnTime : '23:59';
+$conflictStmt = $db->prepare("
+    SELECT control_no, status
+    FROM vehicle_requests
+    WHERE status IN ('pending', 'available')
+      AND vehicle_type = ?
+      AND CONCAT(depart_date, ' ', depart_time) < CONCAT(?, ' ', ?)
+      AND CONCAT(COALESCE(return_date, depart_date), ' ', COALESCE(return_time, '23:59')) > CONCAT(?, ' ', ?)
+    ORDER BY depart_date ASC, depart_time ASC
+");
+$conflictStmt->execute([$vehicleType, $conflictEndDate, $conflictEndTime, $departDate, $departTime]);
+$overlaps = $conflictStmt->fetchAll();
+if ($overlaps) {
+    http_response_code(409);
+    echo json_encode([
+        'success' => false,
+        'error'   => 'VEHICLE_CONFLICT',
+        'message' => 'Vehicle is not available. Select another Vehicle Type',
+    ]);
+    exit;
+}
+
 try {
     $year = date('Y');
     beginTransaction();

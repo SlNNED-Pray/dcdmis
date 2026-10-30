@@ -57,7 +57,6 @@ messageAlert($showAlert, $message, $success);
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" id="bookingSaveBtn">Ok</button>
             </div>
         </div>
     </div>
@@ -88,7 +87,7 @@ messageAlert($showAlert, $message, $success);
 <div class="modal fade" id="vehicleRequestModal" tabindex="-1" role="dialog" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-scrollable" role="document">
         <div class="modal-content">
-            <div class="modal-header bg-primary text-white">
+            <div class="modal-header text-white" style="background-color:#fd7e14;">
                 <h5 class="modal-title">Vehicle Request</h5>
                 <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
                     <span aria-hidden="true">&times;</span>
@@ -110,7 +109,7 @@ messageAlert($showAlert, $message, $success);
 <div class="modal fade" id="eventDetailModal" tabindex="-1" role="dialog" aria-hidden="true">
     <div class="modal-dialog modal-dialog-scrollable" role="document">
         <div class="modal-content">
-            <div class="modal-header bg-primary text-white">
+            <div class="modal-header bg-primary text-white" id="eventDetailHeader">
                 <h5 class="modal-title" id="eventDetailTitle">Booking Details</h5>
                 <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
                     <span aria-hidden="true">&times;</span>
@@ -134,9 +133,9 @@ messageAlert($showAlert, $message, $success);
 <div class="modal fade" id="jobOrderModal" tabindex="-1" role="dialog" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-scrollable" role="document">
         <div class="modal-content">
-            <div class="modal-header bg-warning">
+            <div class="modal-header bg-warning text-white">
                 <h5 class="modal-title">Job Order/Request Form</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
                     <span aria-hidden="true">&times;</span>
                 </button>
             </div>
@@ -404,7 +403,6 @@ messageAlert($showAlert, $message, $success);
             pendingSelInfo = info;
             document.getElementById('bookingType').value = '';
             bookingError('');
-            document.getElementById('bookingSaveBtn').disabled = false;
             $('#bookingModal').modal('show');
         }
 
@@ -416,6 +414,10 @@ messageAlert($showAlert, $message, $success);
             dtc: 'DTC-SC Booking',
             vehicle: 'Vehicle Request',
             joborder: 'Job Order / Request'
+        };
+        var EVENT_KIND_COLORS = {
+            vehicle: '#fd7e14',
+            joborder: '#f6c23e'
         };
 
         function statusBadgeClass(status) {
@@ -435,10 +437,19 @@ messageAlert($showAlert, $message, $success);
         /* Drives the popup from a synthetic event so each kind can be checked without
            depending on which month the feed happens to have rows for. */
         function renderEventDetail(props, title, url) {
+            var eventKind = (props && props.kind) || 'booking';
             document.getElementById('eventDetailTitle').textContent = (props && props.heading) || title || 'Booking Details';
 
+            var header = document.getElementById('eventDetailHeader');
+            var headerColor = EVENT_KIND_COLORS[eventKind];
+            if (headerColor) {
+                header.style.setProperty('background-color', headerColor, 'important');
+            } else {
+                header.style.removeProperty('background-color');
+            }
+
             var kind = document.getElementById('eventDetailKind');
-            kind.textContent = EVENT_KIND_LABELS[(props && props.kind) || 'booking'] || 'Booking';
+            kind.textContent = EVENT_KIND_LABELS[eventKind] || 'Booking';
             kind.className = 'badge badge-pill badge-info';
 
             var statusEl = document.getElementById('eventDetailStatus');
@@ -497,74 +508,12 @@ messageAlert($showAlert, $message, $success);
         function wireDtcBooking() {
             $('#dtcBookingModal').on('hidden.bs.modal', function () {
                 document.getElementById('bookingType').value = '';
-                document.getElementById('bookingSaveBtn').disabled = false;
             });
             $('#vehicleRequestModal').on('hidden.bs.modal', function () {
                 document.getElementById('bookingType').value = '';
-                document.getElementById('bookingSaveBtn').disabled = false;
             });
             $('#jobOrderModal').on('hidden.bs.modal', function () {
                 document.getElementById('bookingType').value = '';
-                document.getElementById('bookingSaveBtn').disabled = false;
-            });
-        }
-
-        function wireBookingSave(calendar) {
-            document.getElementById('bookingSaveBtn').addEventListener('click', function () {
-                var btn = this;
-                var type = document.getElementById('bookingType').value;
-
-                if (!type) {
-                    bookingError('Please select an event option.');
-                    return;
-                }
-                if (!pendingSelInfo) {
-                    bookingError('No date range selected.');
-                    return;
-                }
-
-                if (type === 'DTC Booking') {
-                    openDtcBookingModal();
-                    return;
-                }
-
-                if (type === 'Vehicle Book') {
-                    openVehicleRequestModal();
-                    return;
-                }
-
-                if (type === 'JOB Order Request') {
-                    openJobOrderModal();
-                    return;
-                }
-
-                btn.disabled = true;
-                bookingError('');
-
-                var allDay = /T00:00:00/.test(pendingSelInfo.startStr || '') &&
-                    (!pendingSelInfo.endStr || /T00:00:00/.test(pendingSelInfo.endStr || ''));
-
-                var fd = new FormData();
-                fd.append('type', type);
-                fd.append('start', pendingSelInfo.startStr);
-                fd.append('end', pendingSelInfo.endStr || '');
-                fd.append('all_day', allDay ? 1 : 0);
-
-                fetch('<?= uri() ?>/bsa/bookings-save.php', { method: 'POST', body: fd })
-                    .then(function (r) { return r.json(); })
-                    .then(function (d) {
-                        btn.disabled = false;
-                        if (d && d.success) {
-                            $('#bookingModal').modal('hide');
-                            calendar.refetchEvents();
-                        } else {
-                            bookingError((d && d.message) || 'Failed to save the booking.');
-                        }
-                    })
-                    .catch(function () {
-                        btn.disabled = false;
-                        bookingError('Network error while saving.');
-                    });
             });
         }
 
@@ -614,7 +563,6 @@ plugins: ['dayGrid', 'timeGrid', 'interaction'],
             });
 
             calendar.render();
-            wireBookingSave(calendar);
             wireDtcBooking();
         } catch (err) {
             calendarEl.innerHTML = '<p class="text-danger mb-0">Calendar failed to initialize: ' +

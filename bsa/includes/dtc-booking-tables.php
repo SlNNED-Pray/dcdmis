@@ -7,6 +7,21 @@ if (function_exists('ensureDtcBookingTables')) {
 
 $GLOBALS['__dtcBookingTablesEnsured'] = false;
 
+/**
+ * Venue conflict groups. Main Hall and Inner Room share the same facility and
+ * block each other for overlapping schedules; TV Room is independent.
+ * Returns the venue_option values that conflict with the given venue.
+ */
+function dtcVenueGroupMembers(string $venue): array
+{
+    $groups = [
+        'Main Hall'  => ['Main Hall', 'Inner Room'],
+        'Inner Room' => ['Main Hall', 'Inner Room'],
+        'TV Room'    => ['TV Room'],
+    ];
+    return $groups[$venue] ?? [$venue];
+}
+
 function ensureDtcBookingColumn($db, string $column, string $definition): void
 {
     $stmt = $db->prepare("SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'bsa_facility_bookings' AND column_name = ?");

@@ -7,6 +7,7 @@ require_once(__DIR__ . '/../includes/function.php');
 require_once(__DIR__ . '/../includes/database/database.php');
 require_once(__DIR__ . '/../includes/database/account.php');
 require_once(__DIR__ . '/../includes/database/system-log.php');
+require_once(__DIR__ . '/includes/dtc-booking-tables.php');
 
 $listUrl = uri() . '/bsa/?v=' . encode('Booking Approvals');
 
@@ -66,28 +67,29 @@ if ($booking['status'] !== 'pending') {
 if ($action === 'approve') {
     $endDate = $booking['end_date'] ?: $booking['start_date'];
     $endTime = $booking['end_time'] ?: '23:59';
+    $conflictVenues = dtcVenueGroupMembers((string) $booking['venue_option']);
+    $conflictPlaceholders = implode(', ', array_fill(0, count($conflictVenues), '?'));
     $stmt = $db->prepare("
-        SELECT booking_reference, status
+        SELECT booking_reference, status, venue_option
         FROM bsa_facility_bookings
         WHERE status IN ('pending', 'approved')
           AND id <> ?
           AND NULLIF(venue_option, '') IS NOT NULL
-          AND venue_option = ?
+          AND venue_option IN ($conflictPlaceholders)
           AND CONCAT(start_date, ' ', start_time) < CONCAT(?, ' ', ?)
           AND CONCAT(COALESCE(NULLIF(end_date, ''), start_date), ' ', COALESCE(NULLIF(end_time, ''), '23:59')) > CONCAT(?, ' ', ?)
         ORDER BY start_date ASC, start_time ASC
     ");
-    $stmt->execute([
-        (int) $bookingId,
-        $booking['venue_option'],
-        $endDate, $endTime,
-        $booking['start_date'], $booking['start_time']
-    ]);
+    $stmt->execute(array_merge(
+        [(int) $bookingId],
+        $conflictVenues,
+        [$endDate, $endTime, $booking['start_date'], $booking['start_time']]
+    ));
     $overlaps = $stmt->fetchAll();
 
     if ($overlaps) {
         $refs = array_map(function ($r) {
-            return htmlspecialchars($r['booking_reference']) . ' (' . ucfirst($r['status']) . ')';
+            return htmlspecialchars($r['booking_reference']) . ' - ' . htmlspecialchars($r['venue_option']) . ' (' . ucfirst($r['status']) . ')';
         }, $overlaps);
         $_SESSION['dtcsc_flash'] = [
             'type' => 'danger',

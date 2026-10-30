@@ -157,6 +157,7 @@
                         <option value="Inner Room">Inner Room (5 to 15 pax or 20 w/o tables)</option>
                         <option value="TV Room">TV Room (5 to 15 pax or 30 w/o tables)</option>
                     </select>
+                    <div id="venueAvailabilityNote" class="form-text" style="display:none;"></div>
                 </div>
                 <div class="col-md-6">
                     <label for="participant_count" class="form-label">No. of Participants <span class="text-danger">*</span></label>
@@ -347,6 +348,95 @@
                 currentStep = step;
             }
 
+            // --- Venue availability (prevent double-booking the same venue/time) ---
+            var availabilityUrl = '<?php echo uri(); ?>/bsa/api/dtc-booking-availability.php';
+            var unavailableVenues = [];
+            var approvedVenues = [];
+
+            function venueOptionBaseLabel($opt) {
+                var base = $opt.data('base-label');
+                if (base === undefined) {
+                    base = $opt.text().trim();
+                    $opt.data('base-label', base);
+                }
+                return base;
+            }
+
+            function setVenueNote(message, cls) {
+                var $note = $('#venueAvailabilityNote');
+                if (!message) {
+                    $note.hide().text('');
+                    return;
+                }
+                $note.removeClass('text-danger text-warning').addClass(cls).text(message).show();
+            }
+
+            function applyVenueAvailability() {
+                $('#venue_option option').each(function () {
+                    var $opt = $(this);
+                    var base = venueOptionBaseLabel($opt);
+                    var value = $opt.val();
+                    if (value && unavailableVenues.indexOf(value) !== -1) {
+                        $opt.prop('disabled', true).text(base + ' - unavailable (already booked)');
+                    } else {
+                        $opt.prop('disabled', false).text(base);
+                    }
+                });
+                renderVenueNote();
+            }
+
+            function renderVenueNote() {
+                var selected = $('#venue_option').val();
+                if (selected && unavailableVenues.indexOf(selected) !== -1) {
+                    setVenueNote('Date, Time, Venue is not available.', 'text-danger');
+                } else if (approvedVenues.length) {
+                    setVenueNote('Date, Time, Venue is not available.', 'text-danger');
+                } else if (unavailableVenues.length) {
+                    setVenueNote('Some venue options are unavailable for the selected schedule.', 'text-warning');
+                } else {
+                    setVenueNote('');
+                }
+            }
+
+            function refreshVenueAvailability() {
+                var startDate = $('#start_date').val();
+                var startTime = $('#start_time').val();
+                if (!startDate || !startTime) {
+                    unavailableVenues = [];
+                    approvedVenues = [];
+                    applyVenueAvailability();
+                    return;
+                }
+                $.getJSON(availabilityUrl, {
+                    start_date: startDate,
+                    end_date: $('#end_date').val() || startDate,
+                    start_time: startTime,
+                    end_time: $('#end_time').val() || ''
+                }).done(function (data) {
+                    unavailableVenues = (data && data.conflicts) ? data.conflicts : [];
+                    var details = (data && data.venues) ? data.venues : [];
+                    approvedVenues = [];
+                    details.forEach(function (row) {
+                        if (row.status === 'approved' && approvedVenues.indexOf(row.venue_option) === -1) {
+                            approvedVenues.push(row.venue_option);
+                        }
+                    });
+                    var selected = $('#venue_option').val();
+                    if (selected && unavailableVenues.indexOf(selected) !== -1) {
+                        $('#venue_option').val('').addClass('is-invalid');
+                    }
+                    applyVenueAvailability();
+                }).fail(function () {
+                    unavailableVenues = [];
+                    approvedVenues = [];
+                    applyVenueAvailability();
+                });
+            }
+
+            $('#start_date, #end_date, #start_time, #end_time').on('change', refreshVenueAvailability);
+            $('#venue_option').on('change', renderVenueNote);
+            refreshVenueAvailability();
+
             $('.activity-type').on('change', function () {
                 if ($(this).val() === 'Official') {
                     $('#activityLevelRow').show();
@@ -418,6 +508,14 @@
                     if (!startTime) {
                         alert('Inclusive Time of Use (Start) is required');
                         isValid = false;
+                    }
+                    var selectedVenue = $('#venue_option').val();
+                    if (selectedVenue && unavailableVenues.indexOf(selectedVenue) !== -1) {
+                        alert('Date, Time, Venue is not available.');
+                        $('#venue_option').addClass('is-invalid');
+                        isValid = false;
+                    } else {
+                        $('#venue_option').removeClass('is-invalid');
                     }
                 }
 

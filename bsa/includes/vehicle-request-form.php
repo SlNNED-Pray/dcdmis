@@ -140,6 +140,7 @@
                         </div>
                     <?php endforeach; ?>
                 </div>
+                <div id="vehicleAvailabilityNote" class="small mt-2" style="display:none;"></div>
             </div>
 
             <div class="mb-3">
@@ -232,6 +233,68 @@
         jQuery(function ($) {
             var currentStep = 1;
             var totalSteps = 5;
+            var vehicleAvailabilityUrl = '<?php echo uri(); ?>/bsa/api/vehicle-availability.php';
+            var unavailableVehicleTypes = [];
+
+            function setVehicleNote(text, isError) {
+                var $note = $('#vehicleAvailabilityNote');
+                if (!text) {
+                    $note.hide().text('');
+                    return;
+                }
+                $note.text(text).show();
+                $note.removeClass('text-danger text-warning').addClass(isError ? 'text-danger' : 'text-warning');
+            }
+
+            function applyVehicleAvailability() {
+                $('input[name="vehicle_type"]').each(function () {
+                    var $input = $(this);
+                    var type = $input.val();
+                    var $label = $('label[for="' + $input.attr('id') + '"]');
+                    var base = $label.data('base-label') || $.trim($label.text());
+                    $label.data('base-label', base);
+
+                    if (unavailableVehicleTypes.indexOf(type) !== -1) {
+                        $input.prop('disabled', true);
+                        if ($input.prop('checked')) {
+                            $input.prop('checked', false);
+                        }
+                        $label.html(base + ' <span class="text-danger">- unavailable (already booked)</span>');
+                    } else {
+                        $input.prop('disabled', false);
+                        $label.text(base);
+                    }
+                });
+            }
+
+            function refreshVehicleAvailability() {
+                var params = {
+                    depart_date: $('#depart_date').val() || '',
+                    depart_time: $('#depart_time').val() || '',
+                    return_date: $('#return_date').val() || '',
+                    return_time: $('#return_time').val() || ''
+                };
+                if (!params.depart_date || !params.depart_time) {
+                    unavailableVehicleTypes = [];
+                    applyVehicleAvailability();
+                    setVehicleNote('', false);
+                    return;
+                }
+                $.ajax({
+                    url: vehicleAvailabilityUrl,
+                    method: 'GET',
+                    data: params,
+                    dataType: 'json',
+                    success: function (response) {
+                        unavailableVehicleTypes = (response && response.conflicts) ? response.conflicts : [];
+                        applyVehicleAvailability();
+                        setVehicleNote(unavailableVehicleTypes.length ? 'Vehicle is not available. Select another Vehicle Type' : '', true);
+                    },
+                    error: function () {
+                        setVehicleNote('', false);
+                    }
+                });
+            }
 
             function showStep(step) {
                 $('.form-step').removeClass('active').hide();
@@ -240,6 +303,9 @@
                 $('.step[data-step="' + step + '"]').addClass('active');
                 $('#formProgress').css('width', ((step / totalSteps) * 100) + '%');
                 currentStep = step;
+                if (step === 3) {
+                    refreshVehicleAvailability();
+                }
             }
 
             $('.next-step').on('click', function () {
@@ -257,6 +323,12 @@
                 if (currentStep > 1) {
                     showStep(currentStep - 1);
                 }
+            });
+
+            $('#depart_date, #depart_time, #return_date, #return_time').on('change', function () {
+                unavailableVehicleTypes = [];
+                applyVehicleAvailability();
+                refreshVehicleAvailability();
             });
 
             function validateStep(step) {
@@ -291,6 +363,14 @@
                     }
                     if (departDate && departDate === returnDate && departTime && returnTime && returnTime <= departTime) {
                         alert('Estimated Time of Return must be after the Time of Departure');
+                        isValid = false;
+                    }
+                }
+
+                if (step === 3) {
+                    var selectedType = $('input[name="vehicle_type"]:checked').val();
+                    if (selectedType && unavailableVehicleTypes.indexOf(selectedType) !== -1) {
+                        alert('Vehicle is not available. Select another Vehicle Type');
                         isValid = false;
                     }
                 }

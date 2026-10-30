@@ -101,6 +101,36 @@ if ($errors) {
     exit;
 }
 
+// Prevent double-booking: the venue (and the venues it shares a facility with) must be free.
+$conflictEndDate = $endDate !== '' ? $endDate : $startDate;
+$conflictEndTime = $endTime !== '' ? $endTime : '23:59';
+$conflictVenues = dtcVenueGroupMembers($venueOption);
+$conflictPlaceholders = implode(', ', array_fill(0, count($conflictVenues), '?'));
+$conflictStmt = $db->prepare("
+    SELECT booking_reference, status, venue_option
+    FROM bsa_facility_bookings
+    WHERE status IN ('pending', 'approved')
+      AND NULLIF(venue_option, '') IS NOT NULL
+      AND venue_option IN ($conflictPlaceholders)
+      AND CONCAT(start_date, ' ', start_time) < CONCAT(?, ' ', ?)
+      AND CONCAT(COALESCE(NULLIF(end_date, ''), start_date), ' ', COALESCE(NULLIF(end_time, ''), '23:59')) > CONCAT(?, ' ', ?)
+    ORDER BY start_date ASC, start_time ASC
+");
+$conflictStmt->execute(array_merge($conflictVenues, [$conflictEndDate, $conflictEndTime, $startDate, $startTime]));
+$overlaps = $conflictStmt->fetchAll();
+if ($overlaps) {
+    $refs = array_map(function ($row) {
+        return $row['booking_reference'] . ' - ' . $row['venue_option'] . ' (' . ucfirst($row['status']) . ')';
+    }, $overlaps);
+    http_response_code(409);
+    echo json_encode([
+        'success' => false,
+        'error'   => 'VENUE_CONFLICT',
+        'message' => 'Date, Time, Venue is not available. ' . $venueOption . ' conflicts with an existing booking in the same facility: ' . implode(', ', $refs) . '. Please choose another venue or time.',
+    ]);
+    exit;
+}
+
 try {
     $year = date('Y');
     beginTransaction();
