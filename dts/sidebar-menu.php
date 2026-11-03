@@ -31,6 +31,11 @@ sidebarDivider();
 
 sidebarMenuItem(customUri('dts', 'Section Summary'), 'Summary', 'fa-chart-bar', isset($url) && str_contains($url, 'Summary'));
 
-if ($isRecordsPortal || $isAdminPortal) {
+if ($isRecordsPortal || $isAdminPortal || $isICT) {
+	$documentTypes = count(documentTypes());
 	sidebarMenuItem(customUri('dts', 'Transactions'), 'Transactions', 'fa-exchange-alt', isset($url) && str_contains($url, 'Transactions'));
+
+	sidebarDivider();
+
+	sidebarMenuItem(customUri('dts', 'Document Types'), 'Document Types', 'fa-file', isset($url) && str_contains($url, 'Document Types'), $documentTypes);
 }

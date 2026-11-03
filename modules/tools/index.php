@@ -54,12 +54,13 @@ $showFilledUnfilledItems = in_array($userPositionId, $allowedPositions, true)
     }
 
     $globalCards = [
-        ['title' => 'Project TRACE SY 2025-2026', 'url' => 'https://depedph-my.sharepoint.com/:x:/g/personal/smme_dipolog_deped_gov_ph/IQB5qVXMavCeS7lnrnKRJ-nuAQuFN0dcgiossurYPr9bfHc?e=TOxaIe'],
-        ['title' => 'Project TRACE SY 2026-2027', 'url' => 'https://depedph-my.sharepoint.com/:x:/g/personal/smme_dipolog_deped_gov_ph/IQAs1Jt1VwAzRa6Zazby-5M8AR7uYnpPPSMGH-J9LoXUVFc?e=0c9SVh'],
+        ['title' => 'Project TRACE SY 2025-2026', 'url' => 'https://depedph-my.sharepoint.com/:x:/g/personal/smme_dipolog_deped_gov_ph/IQB5qVXMavCeS7lnrnKRJ-nuAQuFN0dcgiossurYPr9bfHc?e=TOxaIe', 'color' => 'orange'],
+        ['title' => 'Project TRACE SY 2026-2027', 'url' => 'https://depedph-my.sharepoint.com/:x:/g/personal/smme_dipolog_deped_gov_ph/IQAs1Jt1VwAzRa6Zazby-5M8AR7uYnpPPSMGH-J9LoXUVFc?e=0c9SVh', 'color' => 'orange'],
+        ['title' => 'Comparative Monitoring of LSF and PSF', 'url' => 'https://drive.google.com/file/d/1-_Cv-95p_ONlPKqJpOyxg02mv5MJH91K/view?usp=sharing', 'color' => 'success'],
     ];
 
     foreach ($globalCards as $card) {
-        cardMini($card['title'], $card['url'], 'fa-file-excel', 'orange', true);
+        cardMini($card['title'], $card['url'], 'fa-file-excel', $card['color'], true);
     }
     ?>
 </div>

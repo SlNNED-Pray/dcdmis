@@ -20,7 +20,7 @@ function sections($functional_division_id = null)
         $params[] = $functional_division_id;
     }
     $sql = "SELECT s.`id`, s.`head_id`, s.`name`, f.`name` AS `functional_division` FROM `sections` AS s 
-            INNER JOIN `functional_divisions` AS f ON s.functional_division_id = f.`id` 
+            INNER JOIN `functional_divisions` AS f ON s.`functional_division_id` = f.`id` 
             {$where} ORDER BY s.`name` ASC";
     return query($sql, $params);
 }

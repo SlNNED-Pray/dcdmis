@@ -45,6 +45,19 @@ require_once(root() . '/includes/layout/components.php');
                         <select name="destination" id="destination" class="form-control"
                             title="Select document destination..." required>
                             <option value="">Select destination...</option>
+                            <?php if ($isRecordsPortal) {
+                                $allSchools = schools(true);
+                                if (!empty($allSchools)) { ?>
+                                    <optgroup label="Schools">
+                                        <?php foreach ($allSchools as $sch) {
+                                            $schAlias = $sch['alias'] ?: $sch['id'];
+                                            if ($schAlias !== $station && $sch['id'] !== $station) { ?>
+                                                <option value="<?= e($schAlias) ?>"><?= e($sch['name']) ?></option>
+                                            <?php }
+                                        } ?>
+                                    </optgroup>
+                                <?php }
+                            } ?>
                             <?php $divisions = functionalDivisions();
                             foreach ($divisions as $division): ?>
                                 <optgroup label="<?= e($division['name']) ?>">

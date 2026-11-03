@@ -117,13 +117,38 @@ messageAlert($showAlert, $message, $success);
                             <select name="destination" id="destination" class="form-control" title="Select document destination..." required>
                                 <option value="">Select destination...</option>
                                 <?php
+                                $originStation = $document['created_from'] ?? null;
+                                if (!empty($originStation) && $originStation !== $station) {
+                                    $originStationName = stationName($originStation); ?>
+                                    <optgroup label="Originating Station">
+                                        <option value="<?= e($originStation) ?>" <?= setOptionSelected($originStation, $destination) ?>>
+                                            <?= e($originStationName) ?>
+                                        </option>
+                                    </optgroup>
+                                <?php } ?>
+                                <?php if ($isRecordsPortal) {
+                                    $allSchools = schools(true);
+                                    if (!empty($allSchools)) { ?>
+                                        <optgroup label="Schools">
+                                            <?php foreach ($allSchools as $sch) {
+                                                $schAlias = $sch['alias'] ?: $sch['id'];
+                                                if ($schAlias !== $originStation && $sch['id'] !== $originStation && $schAlias !== $station && $sch['id'] !== $station) { ?>
+                                                    <option value="<?= e($schAlias) ?>" <?= setOptionSelected($schAlias, $destination) ?>>
+                                                        <?= e($sch['name']) ?>
+                                                    </option>
+                                                <?php }
+                                            } ?>
+                                        </optgroup>
+                                    <?php }
+                                } ?>
+                                <?php
                                 $divisions = functionalDivisions();
                                 foreach ($divisions as $division): ?>
                                     <optgroup label="<?= $division['name'] ?>">
                                         <?php
                                         $sections = sections($division['id']);
                                         foreach ($sections as $section) {
-                                            if ($section['id'] !== $station) { ?>
+                                            if ($section['id'] !== $station && $section['id'] !== $originStation) { ?>
                                                 <option value="<?= $section['id'] ?>" <?= setOptionSelected($section['id'], $destination) ?>>
                                                     <?= $section['name'] ?>
                                                 </option>
@@ -134,12 +159,9 @@ messageAlert($showAlert, $message, $success);
                                 <?php endforeach ?>
                             </select>
                         <?php } else {
-                            $school = schoolByAlias($destination);
-                            if ($school) {
-                                $school = $school['name'];
-                            }
+                            $stationName = stationName($destination);
                             ?>
-                            <input id="destination" class="form-control" type="text" value="<?= e($school) ?>" disabled>
+                            <input id="destination" class="form-control" type="text" value="<?= e($stationName) ?>" disabled>
                             <input name="destination" class="form-control" type="hidden" value="<?= e($destination) ?>" required>
                         <?php } ?>
                     </td>

@@ -48,6 +48,12 @@ if (!isset($url) || $url === 'dashboard') {
         case 'Transactions':
             $file = 'documents/transactions';
             break;
+        case 'Document Types':
+            $file = 'documents/document-type/page';
+            break;
+        case 'Document Type Details':
+            $file = 'documents/document-type/document-type-detail';
+            break;
         case 'Active Employees':
         case 'Employees':
         case 'School Employees':

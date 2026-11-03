@@ -172,10 +172,10 @@ $(function () {
             },
             minLength: 3,
             select: function (event, ui) {
-                $('#qrInput').val(ui.item.employee_id);
+                $('#qrInput').val(String(ui.item.employee_id));
                 return false;
             }
-        });        
+        });
     }
 });
 
@@ -259,7 +259,7 @@ function saveAttendance(employee_id, status) {
                 });
             } else {
                 $('#modalName').text("Oops!");
-                $('#modalQR').text('Employee Already attended this training.');
+                $('#modalQR').text(res.message || 'Unable to record attendance.');
 
                 $('#attendanceModal').modal('show');
             }

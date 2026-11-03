@@ -49,12 +49,12 @@ function getTrainingAttendees($training_id, $date)
 
 if (isset($_POST['saveTrainingAttendance'])) {
 
-    $training_id = $_POST['training_id'] ?? null;
-    $employee_id = $_POST['employee_id'] ?? null;
+    $training_id = trim((string) ($_POST['training_id'] ?? ''));
+    $employee_id = trim((string) ($_POST['employee_id'] ?? ''));
     $date_in = $_POST['date_in'] ?? null;
     $status = $_POST['status'] ?? null;
 
-    if (!$training_id || !$employee_id) {
+    if ($training_id === '' || $employee_id === '') {
         echo json_encode([
             "status" => "error",
             "message" => "Invalid request"
@@ -80,7 +80,7 @@ if (isset($_POST['saveTrainingAttendance'])) {
     if (!$emp) {
         echo json_encode([
             "status" => "error",
-            "message" => "Employee not found"
+            "message" => "Employee not found. No employee has the ID " . $employee_id . "."
         ]);
         exit;
     }
@@ -125,7 +125,7 @@ if (isset($_POST['saveTrainingAttendance'])) {
         "status" => "success",
         "message" => "Attendance saved!",
         "employee_name" => $emp['full_name'],
-        "employee_id" => $employee_id
+        "employee_id" => (string) $employee_id
     ]);
 }
 
@@ -152,7 +152,7 @@ if (isset($_POST['searchEmployeeName']) && $_POST['searchEmployeeName'] === 'tru
                 last_name,
                 NULLIF(TRIM(name_extension), '')
             ) LIKE ?
-        LIMIT 10;
+        AND `status`='Active' LIMIT 10;
     ");
 
     $stmt->execute(["%{$search}%"]);
@@ -162,10 +162,12 @@ if (isset($_POST['searchEmployeeName']) && $_POST['searchEmployeeName'] === 'tru
     $data = [];
 
     foreach ($employees as $row) {
+        $employeeId = (string) $row['id'];
+
         $data[] = [
-            'label' => $row['fullname'] . ' (' . $row['id'] . ')',
+            'label' => $row['fullname'] . ' (' . $employeeId . ')',
             'value' => $row['fullname'],
-            'employee_id' => $row['id']
+            'employee_id' => $employeeId
         ];
     }
 

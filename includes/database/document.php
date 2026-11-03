@@ -75,39 +75,62 @@ function documentTypeStationSteps($document_type_id)
 
 function documentTypeStationStep($document_type_station_step_id)
 {
-    $sql = "SELECT * FROM `document_type_station_steps` WHERE `id` = ? LIMIT 1";
+    $sql = "SELECT 
+                s.id,
+                s.document_type_id,
+                t.name AS `document_type`,
+                s.step_number,
+                s.destination_id,
+                s.description AS step_description,
+                s.note AS step_note,
+                s.ideal_processing_time
+            FROM `document_type_station_steps` AS s 
+            INNER JOIN `document_types` AS t ON t.id = s.document_type_id
+            WHERE s.id = ? LIMIT 1";
     $result = find($sql, [$document_type_station_step_id]);
     return is_array($result) ? $result : [];
 }
 
-function createDocumentTypeStationStep()
+function createDocumentTypeStationStep($document_type_id, $step_number, $destination_id, $description, $note, $ideal_proceessing_time)
 {
-
+    $data = [
+        'document_type_id' => $document_type_id,
+        'step_number' => $step_number,
+        'destination_id' => $destination_id,
+        'description' => $description,
+        'note' => $note,
+        'ideal_processing_time' => $ideal_proceessing_time
+    ];
+    return insert('document_type_station_steps', $data);
 }
 
-function updateDocumentTypeStationStep()
+function updateDocumentTypeStationStep($document_type_id, $step_number, $destination_id, $description, $note, $ideal_processing_time, $id)
 {
-
+    $data = [
+        'document_type_id' => $document_type_id,
+        'step_number' => $step_number,
+        'destination_id' => $destination_id,
+        'description' => $description,
+        'note' => $note,
+        'ideal_processing_time' => $ideal_processing_time
+    ];
+    return update('document_type_station_steps', $data, '`id` = ?', [$id]);
 }
 
 function deleteDocumentTypeStationStep($document_type_station_step_id)
 {
-    return delete('document_type_station_steps', '`id` = >', [$document_type_station_step_id]);
+    return delete('document_type_station_steps', '`id` = ?', [$document_type_station_step_id]);
 }
 
 function documentTypeStationStepRequirements($document_type_id, $document_type_station_step_id = null)
 {
     $sql = "SELECT 
                 r.id,
-                t.id AS `type_id`,
                 t.name AS `document_type`,
                 s.id AS `step_id`,
-                s.step_number,
-                s.destination_id,
                 s.description AS `step_description`,
-                s.note AS `step_note`,
-                s.ideal_processing_time AS `ideal_time`,
-                r.description AS `requirement_name`,
+                r.description AS `requirement_description`,
+                r.note,
                 r.is_mandatory 
             FROM `document_type_station_step_requirements` AS r 
             INNER JOIN `document_type_station_steps` AS s 
@@ -127,6 +150,44 @@ function documentTypeStationStepRequirements($document_type_id, $document_type_s
     $result = query($sql, $params);
 
     return is_array($result) ? $result : [];
+}
+
+function documentTypeStationStepRequirement($document_type_station_step_requirement_id)
+{
+    $sql = "SELECT * FROM `document_type_station_step_requirements` WHERE `id` = ?";
+    $result = find($sql, [$document_type_station_step_requirement_id]);
+    return is_array($result) ? $result : [];
+}
+
+function createDocumentTypeStationStepRequirement($document_type_station_step_id, $description, $note, $isMandatory)
+{
+    $data = [
+        'document_type_station_step_id' => $document_type_station_step_id,
+        'description' => $description,
+        'note' => $note,
+        'is_mandatory' => $isMandatory,
+    ];
+    return insert('document_type_station_step_requirements', $data);
+}
+
+function updateDocumentTypeStationStepRequirement($description, $note, $isMandatory, $id)
+{
+    $data = [
+        'description' => $description,
+        'note' => $note,
+        'is_mandatory' => $isMandatory
+    ];
+    return update('document_type_station_step_requirements', $data, '`id` = ?', [$id]);
+}
+
+function deleteDocumentTypeStationStepRequirements($document_type_station_step_id)
+{
+    return delete('document_type_station_step_requirements', '`document_type_station_step_id` = ?', [$document_type_station_step_id]);
+}
+
+function deleteDocumentTypeStationStepRequirement($document_type_station_step_requirement_id)
+{
+    return delete('document_type_station_step_requirements', '`id` = ?', [$document_type_station_step_requirement_id]);
 }
 
 function document($document_transaction_id)

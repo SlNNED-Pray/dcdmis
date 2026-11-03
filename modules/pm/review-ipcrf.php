@@ -374,39 +374,3 @@ messageAlert($showAlert, $message, $success);
 <?php if ($canApprove || $canRate): ?>
 </form>
 <?php endif; ?>
-
-<!-- Rating Scale Reference -->
-<div class="card shadow mb-4">
-    <div class="card-header py-2 bg-light">
-        <h6 class="m-0 font-weight-bold text-dark">Rating Scale Reference</h6>
-    </div>
-    <div class="card-body">
-        <div class="row text-center small">
-            <div class="col">
-                <span class="badge badge-success px-3 py-2">5</span>
-                <div class="mt-1">Outstanding</div>
-                <div class="text-muted">91% - 100%</div>
-            </div>
-            <div class="col">
-                <span class="badge badge-info px-3 py-2">4</span>
-                <div class="mt-1">Very Satisfactory</div>
-                <div class="text-muted">81% - 90%</div>
-            </div>
-            <div class="col">
-                <span class="badge badge-primary px-3 py-2">3</span>
-                <div class="mt-1">Satisfactory</div>
-                <div class="text-muted">71% - 80%</div>
-            </div>
-            <div class="col">
-                <span class="badge badge-warning px-3 py-2">2</span>
-                <div class="mt-1">Unsatisfactory</div>
-                <div class="text-muted">51% - 70%</div>
-            </div>
-            <div class="col">
-                <span class="badge badge-danger px-3 py-2">1</span>
-                <div class="mt-1">Poor</div>
-                <div class="text-muted">Below 50%</div>
-            </div>
-        </div>
-    </div>
-</div>

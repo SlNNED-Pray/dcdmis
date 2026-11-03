@@ -48,7 +48,7 @@ contentTitleWithModal('Dashboard', uri() . '/modules/race/nominate-dialog.php', 
     }
     ?>
 
-    <div class="card shadow mt-4 mb-4">
+    <div class="card shadow mb-4">
         <div class="card-header py-3 d-flex align-items-center justify-content-between">
             <h6 class="m-0 font-weight-bold text-dark text-uppercase">
                 <i class="fas fa-chart-pie fa-fw mr-1"></i> Rewards and Recognition Analytics

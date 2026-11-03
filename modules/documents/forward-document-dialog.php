@@ -6,6 +6,7 @@ require_once(root() . '/includes/database/database.php');
 require_once(root() . '/includes/database/document.php');
 require_once(root() . '/includes/database/section.php');
 require_once(root() . '/includes/database/school.php');
+require_once(root() . '/includes/database/utility.php');
 require_once(root() . '/includes/layout/components.php');
 
 $documentId = sanitize(decipher($_GET['id'] ?? null));
@@ -61,13 +62,19 @@ if ($document) {
                                 title="Select document destination..." required>
                                 <option value="">Select destination...</option>
                                 <?php
+                                $originStationName = stationName($destination);
+                                if (!empty($destination) && $destination !== $station) { ?>
+                                    <optgroup label="Document Source">
+                                        <option value="<?= e($destination) ?>"><?= e($originStationName) ?></option>
+                                    </optgroup>
+                                <?php }
                                 $divisions = functionalDivisions();
                                 foreach ($divisions as $division): ?>
                                     <optgroup label="<?= e($division['name']) ?>">
                                         <?php
                                         $sections = sections($division['id']);
                                         foreach ($sections as $section) {
-                                            if ($section['id'] !== $station) { ?>
+                                            if ($section['id'] !== $station && $section['id'] !== $destination) { ?>
                                                 <option value="<?= $section['id'] ?>"><?= $section['name'] ?></option>
                                                 <?php
                                             }
@@ -76,11 +83,7 @@ if ($document) {
                                 <?php endforeach ?>
                             </select>
                         <?php } else {
-                            $stationName = section($destination)['name'] ?? null;
-
-                            if ($stationName === null) {
-                                $stationName = schoolByAlias($destination)['name'] ?? null;
-                            }
+                            $stationName = stationName($destination);
                             ?>
                             <input id="destination" class="form-control text-uppercase" type="text"
                                 value="<?= e($stationName) ?>" disabled>

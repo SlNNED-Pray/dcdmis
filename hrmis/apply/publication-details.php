@@ -180,9 +180,7 @@ if ($code) {
                         </table>
                     </div>
 
-                    <div class="form-group">
-                        <label for="pertinent-documents" class="font-weight-bold mb-0">Optional Document Upload (PDF
-                            only)</label>
+                    <div>
                         <p class="form-text text-muted small mb-2">Review the <a
                                 href="https://www.deped.gov.ph/wp-content/uploads/DO_s2023_007.pdf" target="_blank">DepEd
                                 Order
@@ -194,9 +192,6 @@ if ($code) {
                                 href="https://drive.google.com/file/d/1-t8G_AMDZAVoME4e-i47ZDqXn1gOrLHO/view"
                                 target="_blank">checklist
                                 of requirements</a> for your application.</p>
-                        <input class="form-control-file" type="file" name="application-file" accept=".pdf">
-                        <small class="form-text text-muted">Max file upload size:
-                            <?= UPLOAD_MAX_FILESIZE ?>B</small>
                     </div>
 
                     <button name="submit-application" type="submit" class="btn btn-primary btn-block mt-2">

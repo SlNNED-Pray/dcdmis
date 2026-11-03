@@ -550,6 +550,157 @@ if (isset($_POST['cancel-document'])) {
 	}
 }
 
+if (isset($_POST['save-document-type'])) {
+	$documentTypeId = sanitize(decipher($_POST['verifier']));
+	$name = sanitize($_POST['type']);
+	$description = sanitize($_POST['description']);
+	$for_school = isset($_POST['for_school']) ? '1' : '0';
+	$showAlert = true;
+
+	if (!documentType($documentTypeId)) {
+		$affectedDocumentType = createDocumentType($name, $description, $for_school);
+		$status = 'saved';
+		$logMessage = 'Added document type';
+	} else {
+		$affectedDocumentType = updateDocumentType($name, $description, $for_school, $documentTypeId);
+		$status = 'updated';
+		$logMessage = 'Updated document type';
+	}
+
+	if (!$affectedDocumentType) {
+		$message = "No changes have been made to document type.";
+		return;
+	}
+
+	$message = "Document type has been {$status} successfully.";
+	$success = true;
+
+	createSystemLog($stationId, $userId, $logMessage, $documentTypeId, clientIp());
+}
+
+if (isset($_POST['delete-document-type'])) {
+	$documentTypeId = sanitize(decipher($_POST['verifier']));
+	$showAlert = true;
+	$documentType = documentType($documentTypeId);
+	$target = $documentType ? $documentType['name'] : 'Document Type';
+	$affectedDocumentType = deleteDocumentType($documentTypeId);
+
+	if (!$affectedDocumentType) {
+		$message = 'No changes have been made to document types.';
+		return;
+	}
+
+	$message = 'Document type has been deleted successfully.';
+	$success = true;
+
+	createSystemLog($stationId, $userId, 'Deleted document type', $target, clientIp());
+}
+
+if (isset($_POST['save-document-type-station-step'])) {
+	$documentTypeStepId = sanitize(decipher($_POST['verifier']));
+	$documentTypeId = sanitize(decipher($_POST['data-verifier']));
+	$stepNumber = sanitize($_POST['step_number']);
+	$destination = sanitize($_POST['destination']);
+	$description = sanitize($_POST['description']);
+	$note = sanitize($_POST['note']);
+	$idealProcessingTime = sanitize($_POST['ideal_processing_time']);
+	$showAlert = true;
+	$documentType = documentType($documentTypeId);
+
+	if (!$documentType) {
+		$message = 'Invalid document type. No changes have been saved.';
+		return;
+	}
+
+	$documentTypeName = $documentType['name'];
+
+	if (!documentTypeStationStep($documentTypeStepId)) {
+		$affectedDocumentTypeStep = createDocumentTypeStationStep($documentTypeId, $stepNumber, $destination, $description, $note, $idealProcessingTime);
+		$status = 'saved';
+		$logMessage = "Added document type station step for {$documentTypeName}.";
+	} else {
+		$affectedDocumentTypeStep = updateDocumentTypeStationStep($documentTypeId, $stepNumber, $destination, $description, $note, $idealProcessingTime, $documentTypeStepId);
+		$status = 'updated';
+		$logMessage = "Updated document type station step for {$documentTypeName}.";
+	}
+
+	if (!$affectedDocumentTypeStep) {
+		$message = "No changes have been made to document type {$documentTypeName}.";
+		return;
+	}
+
+	$message = "Station step for document type {$documentTypeName} has been {$status} successfully.";
+	$success = true;
+
+	createSystemLog($stationId, $userId, $logMessage, $documentTypeStepId, clientIp());
+}
+
+if (isset($_POST['delete-document-type-station-step'])) {
+	$documentTypeStepId = sanitize(decipher($_POST['verifier']));
+	$showAlert = true;
+	$documentTypeStationStep = documentTypeStationStep($documentTypeStepId);
+	$target = $documentTypeStationStep ? $documentTypeStationStep['description'] : 'Document Type Station Step';
+
+	$affectedDocumentTypStationStepRequirements = deleteDocumentTypeStationStepRequirements($documentTypeStepId);
+	$affectedDocumentTypeStationStep = deleteDocumentTypeStationStep($documentTypeStepId);
+
+	if (!$affectedDocumentTypeStationStep) {
+		$message = 'No changes have made to document type station step.';
+		return;
+	}
+
+	$message = 'Document type station step has been deleted successfully.';
+	$success = true;
+
+	createSystemLog($stationId, $userId, 'Delete document type station step and requirements', $documentTypeStepId, clientIp());
+}
+
+if (isset($_POST['save-document-type-station-step-requirement'])) {
+	$documentTypeStepRequirementId = sanitize(decipher($_POST['verifier']));
+	$documentTypeStepId = sanitize(decipher($_POST['data-verifier']));
+	$description = sanitize($_POST['description']);
+	$note = sanitize($_POST['note']);
+	$isMandatory = isset($_POST['is-mandatory']) ? '1' : '0';
+	$showAlert = true;
+
+	if (!documentTypeStationStepRequirement($documentTypeStepRequirementId)) {
+		$affectedRequirement = createDocumentTypeStationStepRequirement($documentTypeStepId, $description, $note, $isMandatory);
+		$status = 'saved';
+		$logMessage = 'Added document type station step requirement';
+	} else {
+		$affectedRequirement = updateDocumentTypeStationStepRequirement($description, $note, $isMandatory, $documentTypeStepRequirementId);
+		$status = 'updated';
+		$logMessage = 'Updated document type station step requirement';
+	}
+
+	if (!$affectedRequirement) {
+		$message = 'No changes have been made to document type station step.';
+		return;
+	}
+
+	$message = "Document type has been {$status} successfully.";
+	$success = true;
+
+	createSystemLog($stationId, $userId, $logMessage, $documentTypeStepRequirementId, clientIp());
+}
+
+if (isset($_POST['delete-document-type-station-step-requirement'])) {
+	$documentTypeStepRequirementId = sanitize(decipher($_POST['verifier']));
+	$showAlert = true;
+	$requirement = documentTypeStationStepRequirement($documentTypeStepRequirementId);
+	$affectedDocumentTypStationStepRequirements = deleteDocumentTypeStationStepRequirement($documentTypeStepRequirementId);
+
+	if (!$affectedDocumentTypStationStepRequirements) {
+		$message = 'No changes have made to document type station step requirements.';
+		return;
+	}
+
+	$message = 'Document type station step requirement has been deleted successfully.';
+	$success = true;
+
+	createSystemLog($stationId, $userId, 'Delete document type station step requirement', $documentTypeStepRequirementId, clientIp());
+}
+
 $from = isset($_GET['from']) ? sanitize($_GET['from']) : date('Y') . '-01-01';
 $to = isset($_GET['to']) ? sanitize($_GET['to']) : date('Y-m-d');
 

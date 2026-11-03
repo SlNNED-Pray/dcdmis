@@ -68,7 +68,7 @@ if ($training) {
                     </select>
                 </div>
                 <script>
-                    document.getElementById('project_id')?.addEventListener('change', function() {
+                    document.getElementById('project_id')?.addEventListener('change', function () {
                         var selectedOption = this.options[this.selectedIndex];
                         var progId = selectedOption ? selectedOption.getAttribute('data-program-id') : '';
                         var progInput = document.getElementById('program_id');
@@ -82,7 +82,7 @@ if ($training) {
                 <div class="form-group">
                     <label for="title" class="mb-0">Title <?php showAsterisk() ?></label>
                     <textarea id="title" name="title" class="form-control" rows="3" placeholder="Type title..."
-                        title="Type training title..."><?= e($title) ?></textarea>
+                        title="Type training title..." required><?= e($title) ?></textarea>
                 </div>
 
                 <div class="row">
