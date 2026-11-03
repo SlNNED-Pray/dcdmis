@@ -137,7 +137,12 @@ $displayPhoto = file_exists(root() . '/' . $user['profile_picture']) ? uri() . '
                     linkDropdownItem(uri() . '/dtr', 'Daily Time Record', 'fa-clock', 'Daily Time Records');
                 }
 
-                // Inventory Management link removed - access via horizontal tabs in IMS pages
+                if (userRole($userId, 'ims')) {
+                    require_once(root() . '/ims/helpers.php');
+                    if (imsCanAccessAll()) {
+                        linkDropdownItem(uri() . '/ims', 'Inventory Management', 'fa-box', 'Inventory Management System');
+                    }
+                }
 
                 if (userRole($userId, 'dmis')) {
                     linkDropdownItem(uri() . '/dmis', 'Division Management', 'fa-industry', 'Division Management Information System');

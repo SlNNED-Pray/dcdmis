@@ -20,10 +20,13 @@ function imsNav(string $active): void
         'suppliers' => ['Supplier', 'fa-truck'],
     ];
     echo '<ul class="nav nav-tabs mb-4">';
+    if (!imsCanAccessAll()) {
+        $class = $active === 'pr' ? ' active' : '';
+        echo '<li class="nav-item"><a class="nav-link' . $class . '" href="' . customUri('ims', 'Purchase Requests') . '"><i class="fas fa-file-invoice-dollar"></i> Purchase Requests</a></li>';
+        echo '</ul>';
+        return;
+    }
     foreach ($links as $key => [$label, $icon]) {
-        if (!imsIsStaff() && $key !== 'pr') {
-            continue;
-        }
         $class = $key === $active ? ' active' : '';
         echo '<li class="nav-item"><a class="nav-link' . $class . '" href="' . customUri('ims', $label) . '">';
         echo '<i class="fas ' . $icon . '"></i> ' . e($label) . '</a></li>';

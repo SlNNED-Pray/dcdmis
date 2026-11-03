@@ -1,6 +1,12 @@
 <?php
 // pis/index.php
 require_once('../includes/function.php');
+require_once('helpers.php');
+
+if (!imsCanAccessAll()) {
+    header('Location: ' . customUri('ims', 'Purchase Requests'));
+    exit;
+}
 require_once(root() . '/includes/string.php');
 require_once(root() . '/includes/database/database.php');
 require_once(root() . '/includes/database/account.php');

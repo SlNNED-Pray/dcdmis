@@ -12,34 +12,24 @@ function imsCanAccessAll(): bool
         return $cached;
     }
     
-    $emp = find("SELECT id FROM employees WHERE user_id = ? LIMIT 1", [(int) $userId]);
+    $emp = find("SELECT id FROM employees WHERE id = ? LIMIT 1", [(int) $userId]);
+    if (!$emp) {
+        $emp = find("SELECT id FROM employees WHERE user_id = ? LIMIT 1", [(int) $userId]);
+    }
+    if (!$emp && function_exists('accountEmployeeId')) {
+        $aid = accountEmployeeId($userId);
+        if ($aid) {
+            $emp = ['id' => $aid];
+        }
+    }
     if (!$emp) {
         $cached = false;
         return $cached;
     }
     
-    $result = find(
-        "SELECT p.official_title, e.id, e.first_name, e.last_name 
-         FROM station_assignments sa 
-         LEFT JOIN positions p ON p.id = sa.position_id 
-         LEFT JOIN employees e ON e.id = sa.employee_id 
-         WHERE sa.employee_id = ? 
-         ORDER BY sa.assignment_date DESC LIMIT 1",
-        [(int) $emp['id']]
-    );
-    if ($result) {
-        $title = strtolower((string) ($result['official_title'] ?? ''));
-        $empId = (int) $result['id'];
-        // Deborah Mae Alejo - AO IV
-        if ($empId == 221111220000 && strpos($title, 'administrative officer iv') !== false) {
-            $cached = true;
-            return $cached;
-        }
-        // Alan Chiu - AO V
-        if ($empId == 221116000000 && strpos($title, 'administrative officer v') !== false) {
-            $cached = true;
-            return $cached;
-        }
+    if ((int)$emp['id'] == 221111220000 || (int)$emp['id'] == 221116000000) {
+        $cached = true;
+        return $cached;
     }
     
     $cached = false;
