@@ -13,27 +13,32 @@ function imsCanAccessAll(): bool
     }
     
     $emp = find("SELECT id FROM employees WHERE user_id = ? LIMIT 1", [(int) $userId]);
-    if ($emp) {
-        $result = find(
-            "SELECT p.official_title, o.office_name 
-             FROM station_assignments sa 
-             LEFT JOIN positions p ON p.id = sa.position_id 
-             LEFT JOIN offices o ON o.id = sa.office_id 
-             WHERE sa.employee_id = ? 
-             ORDER BY sa.assignment_date DESC LIMIT 1",
-            [(int) $emp['id']]
-        );
-        if ($result) {
-            $title = strtolower((string) ($result['official_title'] ?? ''));
-            $office = strtolower((string) ($result['office_name'] ?? ''));
-            if (strpos($title, 'administrative officer iv') !== false && strpos($office, 'supply') !== false) {
-                $cached = true;
-                return $cached;
-            }
-            if (strpos($title, 'administrative officer v') !== false && strpos($office, 'admin') !== false) {
-                $cached = true;
-                return $cached;
-            }
+    if (!$emp) {
+        $cached = false;
+        return $cached;
+    }
+    
+    $result = find(
+        "SELECT p.official_title, e.id, e.first_name, e.last_name 
+         FROM station_assignments sa 
+         LEFT JOIN positions p ON p.id = sa.position_id 
+         LEFT JOIN employees e ON e.id = sa.employee_id 
+         WHERE sa.employee_id = ? 
+         ORDER BY sa.assignment_date DESC LIMIT 1",
+        [(int) $emp['id']]
+    );
+    if ($result) {
+        $title = strtolower((string) ($result['official_title'] ?? ''));
+        $empId = (int) $result['id'];
+        // Deborah Mae Alejo - AO IV
+        if ($empId == 221111220000 && strpos($title, 'administrative officer iv') !== false) {
+            $cached = true;
+            return $cached;
+        }
+        // Alan Chiu - AO V
+        if ($empId == 221116000000 && strpos($title, 'administrative officer v') !== false) {
+            $cached = true;
+            return $cached;
         }
     }
     
@@ -70,7 +75,7 @@ function imsIsStaff(): bool
  */
 function requireImsStaff(): void
 {
-    if (imsIsStaff()) {
+    if (imsCanAccessAll() || imsIsStaff()) {
         return;
     }
 

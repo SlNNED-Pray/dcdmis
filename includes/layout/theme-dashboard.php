@@ -41,6 +41,7 @@ require_once(root() . '/includes/layout/components.php');
 
             <?php
             sidebarDivider();
+            sidebarMenuItem(uri() . '/' . $activeApp, 'Dashboard', 'fa-tachometer-alt', !isset($url));
             require_once('sidebar-menu.php');
             sidebarDivider('3', true);
             sidebarToggle();
