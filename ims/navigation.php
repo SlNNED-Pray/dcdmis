@@ -3,6 +3,8 @@ require_once(__DIR__ . '/helpers.php');
 
 function imsNav(string $active): void
 {
+    $canAccessAll = imsCanAccessAll();
+    
     $links = [
         'inventory' => ['Stock and Inventory', 'fa-boxes'],
         'ris' => ['Requisition Slips', 'fa-file-invoice'],
@@ -19,10 +21,17 @@ function imsNav(string $active): void
         'price-history' => ['Price History', 'fa-tags'],
         'suppliers' => ['Supplier', 'fa-truck'],
     ];
+    
     echo '<ul class="nav nav-tabs mb-4">';
     foreach ($links as $key => [$label, $icon]) {
-        if (!imsIsStaff() && $key !== 'ris') {
-            continue;
+        if (!$canAccessAll) {
+            if ($key !== 'pr') {
+                continue;
+            }
+        } else {
+            if (!imsIsStaff() && $key !== 'pr') {
+                continue;
+            }
         }
         $class = $key === $active ? ' active' : '';
         echo '<li class="nav-item"><a class="nav-link' . $class . '" href="' . customUri('ims', $label) . '">';

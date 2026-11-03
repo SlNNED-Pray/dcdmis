@@ -1,6 +1,46 @@
 <?php
 require_once(__DIR__ . '/../includes/database/account.php');
 
+function imsCanAccessAll(): bool
+{
+    $userId = $GLOBALS['userId'] ?? null;
+    if (empty($userId)) {
+        return false;
+    }
+    static $cached = null;
+    if ($cached !== null) {
+        return $cached;
+    }
+    
+    $emp = find("SELECT id FROM employees WHERE user_id = ? LIMIT 1", [(int) $userId]);
+    if ($emp) {
+        $result = find(
+            "SELECT p.official_title, o.office_name 
+             FROM station_assignments sa 
+             LEFT JOIN positions p ON p.id = sa.position_id 
+             LEFT JOIN offices o ON o.id = sa.office_id 
+             WHERE sa.employee_id = ? 
+             ORDER BY sa.assignment_date DESC LIMIT 1",
+            [(int) $emp['id']]
+        );
+        if ($result) {
+            $title = strtolower((string) ($result['official_title'] ?? ''));
+            $office = strtolower((string) ($result['office_name'] ?? ''));
+            if (strpos($title, 'administrative officer iv') !== false && strpos($office, 'supply') !== false) {
+                $cached = true;
+                return $cached;
+            }
+            if (strpos($title, 'administrative officer v') !== false && strpos($office, 'admin') !== false) {
+                $cached = true;
+                return $cached;
+            }
+        }
+    }
+    
+    $cached = false;
+    return $cached;
+}
+
 /**
  * Whether the signed-in account is IMS staff (holds the 'ims' role).
  *
@@ -12,6 +52,9 @@ function imsIsStaff(): bool
     $userId = $GLOBALS['userId'] ?? null;
     if (empty($userId)) {
         return false;
+    }
+    if (imsCanAccessAll()) {
+        return true;
     }
 
     return (bool) userRole($userId, 'ims');
