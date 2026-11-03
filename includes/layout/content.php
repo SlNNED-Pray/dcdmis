@@ -99,6 +99,9 @@ if (!isset($url) || $url === 'dashboard') {
         case 'IAR':
             $file = root() . '/ims/iar.php';
             break;
+        case 'Inspection and Acceptance Report':
+            $file = root() . '/ims/iar-report.php';
+            break;
         case 'Create IAR':
             $file = root() . '/ims/iar-create.php';
             break;
@@ -111,11 +114,20 @@ if (!isset($url) || $url === 'dashboard') {
         case 'Stock Card':
             $file = root() . '/ims/stock-card.php';
             break;
+        case 'Report of Supplies and Materials Issued':
+            $file = root() . '/ims/rsmi.php';
+            break;
         case 'Inventory Custodian Slip':
             $file = root() . '/ims/ics-report.php';
             break;
         case 'Issued ICS':
             $file = root() . '/ims/ics-issued.php';
+            break;
+        case 'Issued PAR':
+            $file = root() . '/ims/par-issued.php';
+            break;
+        case 'Property Acknowledgement Receipt':
+            $file = root() . '/ims/par.php';
             break;
         case 'Physical Count':
             $file = root() . '/ims/physical-count.php';
@@ -126,8 +138,15 @@ if (!isset($url) || $url === 'dashboard') {
         case 'Purchase Order':
             $file = root() . '/ims/po.php';
             break;
+        case 'Supplier':
+            $file = root() . '/ims/suppliers.php';
+            break;
         case 'Booking Approvals':
             $file = root() . '/bsa/booking-approvals.php';
+            break;
+        case 'Booking & Schedule':
+        case 'Booking &amp; Schedule':
+            $file = root() . '/bsa/booking-schedule.php';
             break;
         case 'Request Transfer':
             $file = 'transfer-request/page';

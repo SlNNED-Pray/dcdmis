@@ -8,6 +8,7 @@ require_once(__DIR__ . '/../includes/database/database.php');
 require_once(__DIR__ . '/../includes/database/account.php');
 require_once(__DIR__ . '/../includes/database/system-log.php');
 require_once(__DIR__ . '/includes/dtc-booking-tables.php');
+require_once(__DIR__ . '/includes/bsa-access.php');
 
 $listUrl = uri() . '/bsa/?v=' . encode('Booking Approvals');
 
@@ -16,7 +17,7 @@ if (empty($GLOBALS['userId'] ?? null)) {
     exit;
 }
 
-if (!userRole($GLOBALS['userId'], 'bsa')) {
+if (!canAccessBookingApprovals($GLOBALS['userId'])) {
     $_SESSION['dtcsc_flash'] = ['type' => 'danger', 'message' => 'You do not have permission to approve bookings.'];
     header('Location: ' . uri() . '/bsa/');
     exit;

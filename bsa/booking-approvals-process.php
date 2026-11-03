@@ -14,6 +14,13 @@ if (empty($GLOBALS['userId'] ?? null)) {
     exit;
 }
 
+require_once(__DIR__ . '/includes/bsa-access.php');
+if (!canAccessBookingApprovals($GLOBALS['userId'])) {
+    $_SESSION['dtcsc_flash'] = ['type' => 'danger', 'message' => 'You do not have permission to decide booking requests.'];
+    header('Location: ' . uri() . '/bsa/');
+    exit;
+}
+
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     header('Location: ' . $listUrl);
     exit;

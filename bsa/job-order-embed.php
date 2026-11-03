@@ -39,6 +39,17 @@ $prefill = [
         .form-head p { color: #000000; font-size: .85rem; margin: 0; }
         .form-head .control-no { font-weight: 600; color: #f5cc6d; font-size: .95rem; }
         .booking-form-container { padding: 1.5rem; }
+        .booking-progress .progress-bar { background-color: #198754; transition: width 0.3s ease; }
+        .step-indicators .step { color: #adb5bd; text-align: center; flex: 1; font-size: 0.75rem; font-weight: 600; }
+        .step-indicators .step.active { color: #198754; }
+        .step-indicators .step-number { background: #e9ecef; border-radius: 50%; display: inline-block; width: 24px; height: 24px; line-height: 24px; font-size: 0.75rem; margin-bottom: 2px; }
+        .step-indicators .step.active .step-number { background: #198754; color: #fff; }
+        .form-step { display: none; }
+        .form-step.active { display: block; }
+        .form-navigation { display: flex; justify-content: space-between; gap: 0.75rem; margin-top: 1.5rem; }
+        .booking-summary p { margin-bottom: 0.4rem; }
+        .success-message { text-align: center; padding: 2.5rem 1rem; }
+        .success-icon { font-size: 4rem; color: #198754; }
         legend { font-size: 1rem; font-weight: 600; }
     </style>    
 </head>

@@ -45,3 +45,6 @@ if ($showMonitoringTools || $showOverview) {
         sidebarMenuItem(customUri('pis', 'System Overview'), 'System Overview', 'fa-network-wired', isset($url) && (str_contains($url, 'System Overview') || in_array($url, $primeHrmPillars, true)));
     }
 }
+
+sidebarDivider();
+sidebarMenuItem(uri() . '/bsa/?v=' . encode('Booking & Schedule'), 'Booking & Schedule', 'fa-calendar-check', false);

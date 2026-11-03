@@ -2,9 +2,12 @@
 require_once(__DIR__ . '/navigation.php');
 require_once(root() . '/ims/helpers.php');
 
+$groupOptions = query("SELECT DISTINCT item_group FROM items WHERE item_group IS NOT NULL AND item_group <> '' ORDER BY item_group ASC");
+
 $item = [
     'stock_no' => trim($_POST['stock_no'] ?? ''),
     'description' => trim($_POST['description'] ?? ''),
+    'item_group' => trim($_POST['item_group'] ?? ''),
     'unit' => trim($_POST['unit'] ?? ''),
     'total_units' => (int) ($_POST['total_units'] ?? 0),
     'quantity' => (int) ($_POST['quantity'] ?? 0),
@@ -41,6 +44,15 @@ $openModal = isset($_POST['save-item']) || $url === 'Create Stock Item';
 						</div>
 					</div>
 					<div class="form-group"><label>Description <span class="text-danger">*</span></label><input class="form-control" name="description" required value="<?= e($item['description']) ?>"></div>
+					<div class="form-group">
+						<label>Group / Category</label>
+						<input class="form-control" name="item_group" list="item-group-options" value="<?= e($item['item_group']) ?>" placeholder="Select or type a group">
+						<datalist id="item-group-options">
+							<?php foreach ($groupOptions as $groupOption): ?>
+								<option value="<?= e($groupOption['item_group']) ?>"></option>
+							<?php endforeach; ?>
+						</datalist>
+					</div>
 					<div class="form-row">
 						<div class="form-group col-md-3"><label>Total units</label><input class="form-control" type="number" min="0" name="total_units" value="<?= $item['total_units'] ?: '' ?>"></div>
 						<div class="form-group col-md-3"><label>Unit cost</label><input class="form-control" type="number" min="0" step="0.01" name="unit_cost" value="<?= e($item['unit_cost']) ?>"></div>

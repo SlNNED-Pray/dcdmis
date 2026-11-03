@@ -8,7 +8,7 @@
 <div class="form-head">
     <h2>Vehicle Request / Booking Form</h2>
     <p>Republic of the Philippines · Department of Education · Region IX · Schools Division of Dipolog City</p>
-    <div class="control-no"><span class="bi bi-ticket-perforated me-1"></span>Control No.: <span id="controlNoDisplay">assigned upon submission</span></div>
+    <div class="control-no"><span class="icon-ticket me-1"></span>Control No.: <span id="controlNoDisplay">assigned upon submission</span></div>
 </div>
 
 <div class="booking-form-container">
@@ -189,7 +189,7 @@
 
             <div class="form-navigation">
                 <button type="button" class="btn btn-secondary prev-step"><i class="icon-arrow-left me-2"></i>Previous</button>
-                <button type="button" class="btn btn-primary next-step">Next <i class="bi bi-arrow-right ms-2"></i></button>
+                <button type="button" class="btn btn-primary next-step">Next <i class="icon-arrow-right ms-2"></i></button>
             </div>
         </div>
 
@@ -198,7 +198,7 @@
             <h3 class="mb-4">Step 5: Review & Submit</h3>
 
             <div class="alert alert-info">
-                <i class="bi bi-info-circle me-2"></i>
+                <i class="icon-info-circle me-2"></i>
                 Please review all information before submitting your vehicle request.
             </div>
 
@@ -213,10 +213,10 @@
                 </label>
             </div>
 
-            <div class="form-navigation">
-                <button type="button" class="btn btn-secondary prev-step"><i class="bi bi-arrow-left me-2"></i>Previous</button>
-                <button type="submit" class="btn btn-success btn-lg">
-                    <i class="bi bi-check-circle me-2"></i>Submit Vehicle Request
+            <div class="form-navigation" style="justify-content: flex-start;">
+                <button type="button" class="btn btn-secondary prev-step"><i class="icon-arrow-left me-2"></i>Previous</button>
+                <button type="submit" class="btn btn-success">
+                    <i class="icon-check-circle me-2"></i>Submit Vehicle Request
                 </button>
             </div>
         </div>
@@ -434,7 +434,7 @@
                             $('.form-step').removeClass('active').hide();
                             $('#vehicleSummary').html(
                                 '<div class="success-message">' +
-                                    '<div class="success-icon"><i class="bi bi-check-circle"></i></div>' +
+                                    '<div class="success-icon"><i class="icon-check-circle"></i></div>' +
                                     '<h1>Request Submitted</h1>' +
                                     '<p class="text-muted">Your vehicle request has been submitted successfully.</p>' +
                                     '<p class="mb-0"><strong>Control No.:</strong> ' + response.control_no + '</p>' +

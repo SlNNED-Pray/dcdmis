@@ -15,6 +15,15 @@ header('Pragma: no-cache');
 
 $pdo = connection();
 $risId = (int) (decode($_GET['id'] ?? '') ?: 0);
+if ($risId <= 0 && !empty($_GET['ris_no'])) {
+	$risNoLookup = trim((string) $_GET['ris_no']);
+	if ($risNoLookup !== '') {
+		$foundRis = find("SELECT id FROM requisition_slips WHERE ris_no = ? LIMIT 1", [$risNoLookup]);
+		if ($foundRis && !empty($foundRis['id'])) {
+			$risId = (int) $foundRis['id'];
+		}
+	}
+}
 $ris = $risId > 0 ? find(
     "SELECT r.id, r.ris_no, r.division, r.office, r.purpose, r.created_at, r.employee_id,
             CONCAT(e.first_name, ' ', e.last_name) AS employee
@@ -66,7 +75,49 @@ $issuedByDate = trim((string) ($_GET['issued_date'] ?? date('Y-m-d')));
 $receivedByName = trim((string) ($_GET['received_by'] ?? ''));
 $receivedByDesignation = trim((string) ($_GET['received_designation'] ?? ''));
 $receivedByDate = trim((string) ($_GET['received_date'] ?? date('Y-m-d')));
-$showSigForm = ($issuedByName === '' && $receivedByName === '');
+
+// Load from DB if not passed via GET
+if (($issuedByName === '' || $receivedByName === '') && $risId > 0) {
+	$saved = find(
+		"SELECT issued_by_name, issued_by_designation, issued_by_date, received_by_name, received_by_designation, received_by_date
+		 FROM requisition_slips WHERE id = ?",
+		[$risId]
+	);
+	if ($saved) {
+		if ($issuedByName === '' && !empty($saved['issued_by_name'])) {
+			$issuedByName = $saved['issued_by_name'];
+			if ($issuedByDesignation === '' && !empty($saved['issued_by_designation'])) $issuedByDesignation = $saved['issued_by_designation'];
+			if (isset($_GET['issued_date']) && $_GET['issued_date'] === '') {
+				// keep
+			} elseif (empty($_GET['issued_date']) && !empty($saved['issued_by_date'])) {
+				$issuedByDate = $saved['issued_by_date'];
+			}
+		}
+		if ($receivedByName === '' && !empty($saved['received_by_name'])) {
+			$receivedByName = $saved['received_by_name'];
+			if ($receivedByDesignation === '' && !empty($saved['received_by_designation'])) $receivedByDesignation = $saved['received_by_designation'];
+			if (empty($_GET['received_date']) && !empty($saved['received_by_date'])) {
+				$receivedByDate = $saved['received_by_date'];
+			}
+		}
+	}
+}
+
+// Save to DB if provided via GET
+if (($issuedByName !== '' || $receivedByName !== '') && $risId > 0) {
+	$upd = array();
+	if (isset($_GET['issued_by'])) $upd['issued_by_name'] = $issuedByName;
+	if (isset($_GET['issued_designation'])) $upd['issued_by_designation'] = $issuedByDesignation;
+	if (isset($_GET['issued_date'])) $upd['issued_by_date'] = $issuedByDate !== '' ? $issuedByDate : null;
+	if (isset($_GET['received_by'])) $upd['received_by_name'] = $receivedByName;
+	if (isset($_GET['received_designation'])) $upd['received_by_designation'] = $receivedByDesignation;
+	if (isset($_GET['received_date'])) $upd['received_by_date'] = $receivedByDate !== '' ? $receivedByDate : null;
+	if (!empty($upd)) {
+		update('requisition_slips', $upd, "id = $risId");
+	}
+}
+
+$showSigForm = ($issuedByName === '');
 $issuedByDateDisplay = $issuedByDate !== '' ? date('F j, Y', strtotime($issuedByDate)) : '';
 $receivedByDateDisplay = $receivedByDate !== '' ? date('F j, Y', strtotime($receivedByDate)) : '';
 

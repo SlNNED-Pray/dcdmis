@@ -1,573 +1,178 @@
 <?php
-// bsa/dashboard.php
-require_once(__DIR__ . '/includes/dtcsc-optional.php');
-
-$dashboardDefaultDate = date('Y-m-d');
-try {
-    $dtcDefaultStmt = Database::getInstance()->getConnection()->query("
-        SELECT DATE_FORMAT(MIN(start_date), '%Y-%m-01')
-        FROM bookings
-        WHERE status IN ('approved', 'pending')
-        GROUP BY DATE_FORMAT(start_date, '%Y-%m')
-        ORDER BY COUNT(*) DESC, MIN(start_date) ASC
-        LIMIT 1
-    ");
-    $dashboardDefaultDate = $dtcDefaultStmt->fetchColumn() ?: $dashboardDefaultDate;
-} catch (Throwable $e) {
-    // Ignore; fall back to the current date.
+// bsa/dashboard.php — Schedule Overview bar graph (view: Dashboard)
+if (!function_exists('uri')) {
+    http_response_code(403);
+    exit('Forbidden');
 }
+
 messageAlert($showAlert, $message, $success);
 ?>
 
 <div class="row mt-4">
     <div class="col-12">
         <div class="card shadow mb-4">
-            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
-                <h6 class="m-0 font-weight-bold text-primary">Facility Booking Calendar</h6>
+            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between flex-wrap">
+                <h6 class="m-0 font-weight-bold text-primary">Schedule Overview</h6>
+                <div class="mb-0 d-flex align-items-center flex-wrap">
+                    <label class="mb-0 mr-2 small font-weight-bold text-gray-600" for="schedulePeriod">Show by</label>
+                    <select id="schedulePeriod" class="form-control form-control-sm mr-3" style="width:auto;">
+                        <option value="day">Day</option>
+                        <option value="week">Week</option>
+                        <option value="month" selected>Month</option>
+                        <option value="year">Year</option>
+                    </select>
+                    <label class="mb-0 mr-2 small font-weight-bold text-gray-600" for="scheduleCategory">Category</label>
+                    <select id="scheduleCategory" class="form-control form-control-sm" style="width:auto;">
+                        <option value="all" selected>Show All</option>
+                        <option value="joborder">Job Order Request</option>
+                        <option value="vehicle">Vehicle Booking</option>
+                        <option value="dtc">DTC Booking</option>
+                    </select>
+                </div>
             </div>
             <div class="card-body">
-                <div id="calendar"></div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="modal fade" id="bookingModal" tabindex="-1" role="dialog" aria-hidden="true">
-    <div class="modal-dialog" role="document">
-        <div class="modal-content">
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title">Select Event Option</h5>
-                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-            <div class="modal-body">
-                <form id="bookingForm">
-                    <div class="form-group">
-                        <label for="bookingType">Event Option *</label>
-                        <select class="form-control" id="bookingType" required>
-                            <option value="">-- Select Option --</option>
-                            <option value="DTC Booking">DTC Booking</option>
-                            <option value="Vehicle Book">Vehicle Book</option>
-                            <option value="JOB Order Request">JOB Order Request</option>
-                        </select>
-                    </div>
-                    <div id="bookingError" class="text-danger small mb-2" style="display:none;"></div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="modal fade" id="dtcBookingModal" tabindex="-1" role="dialog" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-scrollable" role="document">
-        <div class="modal-content">
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title">Facility Booking</h5>
-                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-            <div class="modal-body p-0">
-                <div id="dtcLoading" class="text-center py-5">
-                    <i class="fas fa-spinner fa-spin mr-2"></i>Loading booking form...
+                <p class="mb-3 font-weight-bold text-primary" id="scheduleChartSummary">Total schedules: loading...</p>
+                <div class="chart-bar" style="height:20rem;">
+                    <canvas id="scheduleBarChart"></canvas>
                 </div>
-                <iframe id="dtcBookingFrame" title="DTC Booking Form" style="display:none;width:100%;min-height:70vh;border:0;" src="about:blank"></iframe>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                <p class="mb-0 text-danger small" id="scheduleChartError" style="display:none;"></p>
             </div>
         </div>
     </div>
 </div>
 
-<div class="modal fade" id="vehicleRequestModal" tabindex="-1" role="dialog" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-scrollable" role="document">
-        <div class="modal-content">
-            <div class="modal-header text-white" style="background-color:#fd7e14;">
-                <h5 class="modal-title">Vehicle Request</h5>
-                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-            <div class="modal-body p-0">
-                <div id="vehicleLoading" class="text-center py-5">
-                    <i class="fas fa-spinner fa-spin mr-2"></i>Loading vehicle request form...
-                </div>
-                <iframe id="vehicleRequestFrame" title="Vehicle Request Form" style="display:none;width:100%;min-height:70vh;border:0;" src="about:blank"></iframe>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="modal fade" id="eventDetailModal" tabindex="-1" role="dialog" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-scrollable" role="document">
-        <div class="modal-content">
-            <div class="modal-header bg-primary text-white" id="eventDetailHeader">
-                <h5 class="modal-title" id="eventDetailTitle">Booking Details</h5>
-                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-            <div class="modal-body">
-                <div class="d-flex align-items-center mb-3">
-                    <span class="badge badge-pill" id="eventDetailKind">&nbsp;</span>
-                    <span class="badge ml-2" id="eventDetailStatus">&nbsp;</span>
-                </div>
-                <dl class="row mb-0" id="eventDetailList"></dl>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-                <a class="btn btn-primary" id="eventDetailLink" href="#">Open Full Record</a>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="modal fade" id="jobOrderModal" tabindex="-1" role="dialog" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-scrollable" role="document">
-        <div class="modal-content">
-            <div class="modal-header bg-warning text-white">
-                <h5 class="modal-title">Job Order/Request Form</h5>
-                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-            <div class="modal-body p-0">
-                <div id="jobOrderLoading" class="text-center py-5">
-                    <i class="fas fa-spinner fa-spin mr-2"></i>Loading job order form...
-                </div>
-                <iframe id="jobOrderFrame" title="Job Order/Request Form" style="display:none;width:100%;min-height:70vh;border:0;" src="about:blank"></iframe>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<style>
-.fc-button.fc-button-primary {
-    background-color: #4e73df;
-    border-color: #4e73df;
-}
-.fc-button.fc-button-primary:hover {
-    background-color: #4e97df !important;
-    border-color: #4e97df !important;
-}
-.fc-button.fc-button-primary:focus,
-.fc-button.fc-button-primary:active,
-.fc-button.fc-button-primary.fc-button-active {
-    background-color: #4e73df !important;
-    border-color: #4e73df !important;
-}
-.fc-button.fc-button-primary:not(:disabled):active,
-.fc-button.fc-button-primary:not(:disabled).fc-button-active {
-    background-color: #4e73df !important;
-    border-color: #4e73df !important;
-}
-/* Scheduled events open a details popup, so show a pointer on hover. */
-.fc-event.fc-clickable { cursor: pointer; }
-
-/* Every rounded surface on the BSA dashboard uses a 25px radius.
-   Bootstrap/SB Admin give each element its own value (.card .35rem,
-   .modal-content .3rem, .btn/.form-control/.alert/.badge .35rem,
-   .fc-event 3px), so all are overridden here. The #bsaDashboard wrapper
-   keeps the rules off the shared sidebar/topbar chrome. */
-#bsaDashboard .card,
-#bsaDashboard .alert,
-#bsaDashboard .modal-content,
-#bsaDashboard .btn,
-#bsaDashboard .form-control,
-#bsaDashboard .badge,
-#bsaDashboard .fc-button,
-#bsaDashboard .fc-event {
-    border-radius: 25px;
-}
-
-/* Headers and footers sit flush against the modal or card edge, so only
-   the corners that meet the container's outer edge are rounded — the
-   inner corners must stay square or they spill past the rounded parent. */
-#bsaDashboard .card-header:first-child,
-#bsaDashboard .modal-header {
-    border-top-left-radius: 25px;
-    border-top-right-radius: 25px;
-}
-#bsaDashboard .card-footer:last-child,
-#bsaDashboard .modal-footer {
-    border-bottom-left-radius: 25px;
-    border-bottom-right-radius: 25px;
-}
-
-/* FullCalendar joins the prev/next/today and Month/Week/Day buttons with
-   -1px margins. Its own rules zero the shared inner corners at a lower
-   specificity than the ID rule above, so restore them here — otherwise
-   every button in a group rounds on all four sides and the seams notch. */
-#bsaDashboard .fc-button-group > .fc-button:not(:last-child) {
-    border-top-right-radius: 0;
-    border-bottom-right-radius: 0;
-}
-#bsaDashboard .fc-button-group > .fc-button:not(:first-child) {
-    border-top-left-radius: 0;
-    border-bottom-left-radius: 0;
-}
-
-/* Remaining FullCalendar surfaces: the "more" popover (its header sits
-   flush against the popover edge, so only the top corners round), the
-   event resize handles, and the week-number cell. */
-#bsaDashboard .fc-popover,
-#bsaDashboard .fc-h-event.fc-selected .fc-resizer,
-#bsaDashboard .fc-time-grid-event.fc-selected .fc-resizer,
-#bsaDashboard .fc-dayGrid-view .fc-day-top .fc-week-number {
-    border-radius: 25px;
-}
-#bsaDashboard .fc-popover .fc-header {
-    border-top-left-radius: 25px;
-    border-top-right-radius: 25px;
-}
-</style>
-
-<link rel="stylesheet" href="<?= uri() ?>/bsa/fullcalendar/packages/core/main.css?v=<?= VERSION ?>">
-<link rel="stylesheet" href="<?= uri() ?>/bsa/fullcalendar/packages/daygrid/main.css?v=<?= VERSION ?>">
-<link rel="stylesheet" href="<?= uri() ?>/bsa/fullcalendar/packages/timegrid/main.css?v=<?= VERSION ?>">
-<script src="<?= uri() ?>/bsa/fullcalendar/packages/core/main.js?v=<?= VERSION ?>"></script>
-<script src="<?= uri() ?>/bsa/fullcalendar/packages/interaction/main.js?v=<?= VERSION ?>"></script>
-<script src="<?= uri() ?>/bsa/fullcalendar/packages/daygrid/main.js?v=<?= VERSION ?>"></script>
-<script src="<?= uri() ?>/bsa/fullcalendar/packages/timegrid/main.js?v=<?= VERSION ?>"></script>
+<script src="<?= uri() ?>/assets/vendor/chart.js/Chart.min.js?v=<?= VERSION ?>"></script>
 <script>
 (function () {
-    var calendarEl = document.getElementById('calendar');
-    if (!calendarEl) {
+    var canvas = document.getElementById('scheduleBarChart');
+    var summaryEl = document.getElementById('scheduleChartSummary');
+    var errorEl = document.getElementById('scheduleChartError');
+    var periodEl = document.getElementById('schedulePeriod');
+    var categoryEl = document.getElementById('scheduleCategory');
+
+    if (!canvas || !summaryEl || !errorEl || !periodEl || !categoryEl) {
         return;
     }
 
-    calendarEl.innerHTML = '<p class="text-secondary mb-0"><i class="fas fa-spinner fa-spin mr-2"></i>Loading calendar...</p>';
-
-    if (typeof FullCalendar === 'undefined') {
-        calendarEl.innerHTML = '<p class="text-danger mb-0">Calendar failed to initialize: FullCalendar core script did not load.</p>';
+    if (typeof Chart === 'undefined') {
+        summaryEl.textContent = 'Total schedules: unavailable';
+        errorEl.textContent = 'Bar chart failed to initialize: Chart.js did not load.';
+        errorEl.style.display = 'block';
         return;
     }
 
-    document.addEventListener('DOMContentLoaded', function () {
-        if (typeof FullCalendarDayGrid === 'undefined' || typeof FullCalendarTimeGrid === 'undefined') {
-            calendarEl.innerHTML = '<p class="text-danger mb-0">Calendar failed to initialize: FullCalendar day grid / time grid plugin did not load.</p>';
-            return;
-        }
+    var CATEGORY_META = {
+        dtc:      { label: 'DTC Booking', color: '#4e73df' },
+        vehicle:  { label: 'Vehicle Booking', color: '#fd7e14' },
+        joborder: { label: 'Job Order Request', color: '#f6c23e' }
+    };
+    var CATEGORY_ORDER = ['dtc', 'vehicle', 'joborder'];
 
-        function bookingError(msg) {
-            var el = document.getElementById('bookingError');
-            el.textContent = msg;
-            el.style.display = msg ? 'block' : 'none';
-            return msg;
-        }
-
-        var pendingSelInfo = null;
-
-        function parseDatePart(str) {
-            if (!str) {
-                return '';
+    var chart = new Chart(canvas.getContext('2d'), {
+        type: 'bar',
+        data: { labels: [], datasets: [] },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            legend: { display: true, position: 'top' },
+            tooltips: {
+                mode: 'index',
+                intersect: false,
+                backgroundColor: 'rgb(255,255,255)',
+                titleFontColor: '#6e707e',
+                bodyFontColor: '#858796',
+                borderColor: '#dddfeb',
+                borderWidth: 1
+            },
+            scales: {
+                xAxes: [{
+                    stacked: true,
+                    gridLines: { display: false, drawBorder: false }
+                }],
+                yAxes: [{
+                    stacked: true,
+                    beginAtZero: true,
+                    ticks: { beginAtZero: true, precision: 0 },
+                    gridLines: { color: '#e3e6f0' }
+                }]
             }
-            var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(str);
-            return m ? m[1] + '-' + m[2] + '-' + m[3] : '';
-        }
-
-        function buildDtcBookingUrl() {
-            var src = '/bsa/dtc-booking-embed.php';
-            if (!pendingSelInfo) {
-                return src;
-            }
-
-            var startRaw = pendingSelInfo.startStr || '';
-            var endRaw = pendingSelInfo.endStr || '';
-            var allDaySel = /T00:00:00/.test(startRaw) && (!endRaw || /T00:00:00/.test(endRaw));
-            var sDate = parseDatePart(startRaw);
-            var eDate = parseDatePart(endRaw);
-            var sTime = /T(\d{2}:\d{2})/.exec(startRaw);
-            var eTime = /T(\d{2}:\d{2})/.exec(endRaw);
-
-            var params = [];
-            if (sDate) {
-                params.push('start_date=' + encodeURIComponent(sDate));
-            }
-            if (eDate) {
-                params.push('end_date=' + encodeURIComponent(eDate));
-            }
-            if (!allDaySel) {
-                if (sTime) {
-                    params.push('start_time=' + encodeURIComponent(sTime[1]));
-                }
-                if (eTime) {
-                    params.push('end_time=' + encodeURIComponent(eTime[1]));
-                }
-            } else {
-                params.push('start_time=08:00');
-                params.push('end_time=17:00');
-            }
-            return src + (params.length ? '?' + params.join('&') : '');
-        }
-
-        function openDtcBookingModal() {
-            var iframe = document.getElementById('dtcBookingFrame');
-            var loading = document.getElementById('dtcLoading');
-
-            loading.style.display = 'block';
-            iframe.style.display = 'none';
-
-            iframe.onload = function () {
-                loading.style.display = 'none';
-                iframe.style.display = 'block';
-            };
-
-            iframe.src = buildDtcBookingUrl();
-            $('#dtcBookingModal').modal('show');
-        }
-
-        function buildVehicleRequestUrl() {
-            var src = '/bsa/vehicle-request-embed.php';
-            if (!pendingSelInfo) {
-                return src;
-            }
-
-            var startRaw = pendingSelInfo.startStr || '';
-            var endRaw = pendingSelInfo.endStr || '';
-            var allDaySel = /T00:00:00/.test(startRaw) && (!endRaw || /T00:00:00/.test(endRaw));
-            var sDate = parseDatePart(startRaw);
-            var eDate = parseDatePart(endRaw);
-            var sTime = /T(\d{2}:\d{2})/.exec(startRaw);
-            var eTime = /T(\d{2}:\d{2})/.exec(endRaw);
-
-            var params = [];
-            if (sDate) {
-                params.push('start_date=' + encodeURIComponent(sDate));
-            }
-            if (eDate) {
-                params.push('end_date=' + encodeURIComponent(eDate));
-            }
-            if (!allDaySel) {
-                if (sTime) {
-                    params.push('start_time=' + encodeURIComponent(sTime[1]));
-                }
-                if (eTime) {
-                    params.push('end_time=' + encodeURIComponent(eTime[1]));
-                }
-            } else {
-                params.push('start_time=08:00');
-                params.push('end_time=17:00');
-            }
-            return src + (params.length ? '?' + params.join('&') : '');
-        }
-
-        function openVehicleRequestModal() {
-            var iframe = document.getElementById('vehicleRequestFrame');
-            var loading = document.getElementById('vehicleLoading');
-
-            loading.style.display = 'block';
-            iframe.style.display = 'none';
-
-            iframe.onload = function () {
-                loading.style.display = 'none';
-                iframe.style.display = 'block';
-            };
-
-            iframe.src = buildVehicleRequestUrl();
-            $('#vehicleRequestModal').modal('show');
-        }
-
-        function buildJobOrderUrl() {
-            var src = '/bsa/job-order-embed.php';
-            var date = pendingSelInfo ? parseDatePart(pendingSelInfo.startStr || '') : '';
-            return date ? src + '?date_request=' + encodeURIComponent(date) : src;
-        }
-
-        function openJobOrderModal() {
-            var iframe = document.getElementById('jobOrderFrame');
-            var loading = document.getElementById('jobOrderLoading');
-
-            loading.style.display = 'block';
-            iframe.style.display = 'none';
-            iframe.onload = function () {
-                loading.style.display = 'none';
-                iframe.style.display = 'block';
-            };
-            iframe.src = buildJobOrderUrl();
-            $('#jobOrderModal').modal('show');
-        }
-
-        function openBookingModal(info) {
-            pendingSelInfo = info;
-            document.getElementById('bookingType').value = '';
-            bookingError('');
-            $('#bookingModal').modal('show');
-        }
-
-        /* Approved schedules already carry their detail rows in extendedProps, so the
-           popup renders straight from the event rather than re-querying per click. */
-        var EVENT_KIND_LABELS = {
-            booking: 'Facility Booking',
-            facility: 'Facility Booking',
-            dtc: 'DTC-SC Booking',
-            vehicle: 'Vehicle Request',
-            joborder: 'Job Order / Request'
-        };
-        var EVENT_KIND_COLORS = {
-            vehicle: '#fd7e14',
-            joborder: '#f6c23e'
-        };
-
-        function statusBadgeClass(status) {
-            var s = String(status || '').toLowerCase();
-            if (s === 'approved' || s === 'available') {
-                return 'badge-success';
-            }
-            if (s === 'pending') {
-                return 'badge-warning';
-            }
-            if (s === 'rejected' || s === 'cancelled') {
-                return 'badge-danger';
-            }
-            return 'badge-secondary';
-        }
-
-        /* Drives the popup from a synthetic event so each kind can be checked without
-           depending on which month the feed happens to have rows for. */
-        function renderEventDetail(props, title, url) {
-            var eventKind = (props && props.kind) || 'booking';
-            document.getElementById('eventDetailTitle').textContent = (props && props.heading) || title || 'Booking Details';
-
-            var header = document.getElementById('eventDetailHeader');
-            var headerColor = EVENT_KIND_COLORS[eventKind];
-            if (headerColor) {
-                header.style.setProperty('background-color', headerColor, 'important');
-            } else {
-                header.style.removeProperty('background-color');
-            }
-
-            var kind = document.getElementById('eventDetailKind');
-            kind.textContent = EVENT_KIND_LABELS[eventKind] || 'Booking';
-            kind.className = 'badge badge-pill badge-info';
-
-            var statusEl = document.getElementById('eventDetailStatus');
-            var status = (props && props.status) || '';
-            statusEl.textContent = status
-                ? status.charAt(0).toUpperCase() + status.slice(1)
-                : 'Scheduled';
-            statusEl.className = 'badge ' + (status ? statusBadgeClass(status) : 'badge-secondary');
-
-            var details = (props && props.details) || {};
-            var list = document.getElementById('eventDetailList');
-            list.innerHTML = '';
-            var keys = Object.keys(details);
-            if (!keys.length) {
-                var empty = document.createElement('div');
-                empty.className = 'text-muted';
-                empty.textContent = 'No further details available for this schedule.';
-                list.appendChild(empty);
-            }
-            keys.forEach(function (key) {
-                var dt = document.createElement('dt');
-                dt.className = 'col-sm-4 text-sm-right font-weight-bold';
-                dt.textContent = key;
-                var dd = document.createElement('dd');
-                dd.className = 'col-sm-8';
-                dd.textContent = details[key];
-                list.appendChild(dt);
-                list.appendChild(dd);
-            });
-
-            var link = document.getElementById('eventDetailLink');
-            if (url) {
-                link.href = url;
-                link.style.display = '';
-            } else {
-                link.style.display = 'none';
-            }
-        }
-
-        function openEventDetailModal(info) {
-            var ev = info.event;
-            renderEventDetail(ev.extendedProps || {}, ev.title, ev.url);
-            $('#eventDetailModal').modal('show');
-        }
-
-        document.getElementById('bookingType').addEventListener('change', function () {
-            if (this.value === 'DTC Booking') {
-                openDtcBookingModal();
-            } else if (this.value === 'Vehicle Book') {
-                openVehicleRequestModal();
-            } else if (this.value === 'JOB Order Request') {
-                openJobOrderModal();
-            }
-        });
-
-        function wireDtcBooking() {
-            $('#dtcBookingModal').on('hidden.bs.modal', function () {
-                document.getElementById('bookingType').value = '';
-            });
-            $('#vehicleRequestModal').on('hidden.bs.modal', function () {
-                document.getElementById('bookingType').value = '';
-            });
-            $('#jobOrderModal').on('hidden.bs.modal', function () {
-                document.getElementById('bookingType').value = '';
-            });
-        }
-
-        try {
-            var calendar = new FullCalendar.Calendar(calendarEl, {
-plugins: ['dayGrid', 'timeGrid', 'interaction'],
-                defaultView: 'dayGridMonth',
-                defaultDate: '<?= $dashboardDefaultDate ?>',
-                height: 640,
-                header: {
-                    left: 'prev,next today',
-                    center: 'title',
-                    right: 'dayGridMonth,timeGridWeek,timeGridDay'
-                },
-                buttonText: {
-                    prev: '<',
-                    next: '>',
-                    today: 'Today',
-                    dayGridMonth: 'Month',
-                    timeGridWeek: 'Week',
-                    timeGridDay: 'Day'
-                },
-                editable: false,
-                selectable: true,
-                eventColor: '#4e73df',
-                events: {
-                    url: '<?= uri() ?>/bsa/bookings.php',
-                    method: 'GET'
-                },
-                eventDidMount: function (info) {
-                    // Job order events carry a multi-line tooltip for the hover card.
-                    if (info.event.extendedProps && info.event.extendedProps.tooltip) {
-                        info.el.setAttribute('title', info.event.extendedProps.tooltip);
-                    }
-                    // Signals that an approved schedule opens a details popup.
-                    info.el.classList.add('fc-clickable');
-                },
-                eventClick: function (info) {
-                    // Show the popup instead of letting FullCalendar follow event.url
-                    // directly; the popup keeps that link as "Open Full Record".
-                    info.jsEvent.preventDefault();
-                    openEventDetailModal(info);
-                },
-                select: function (info) {
-                    openBookingModal(info);
-                }
-            });
-
-            calendar.render();
-            wireDtcBooking();
-        } catch (err) {
-            calendarEl.innerHTML = '<p class="text-danger mb-0">Calendar failed to initialize: ' +
-                (err && err.message ? err.message : String(err)) + '</p>';
         }
     });
+
+    function buildDatasets(payload) {
+        var selected = categoryEl.value || 'all';
+        var keys = selected === 'all'
+            ? CATEGORY_ORDER
+            : CATEGORY_ORDER.filter(function (key) { return key === selected; });
+
+        return keys.map(function (key) {
+            return {
+                label: CATEGORY_META[key].label,
+                backgroundColor: CATEGORY_META[key].color,
+                borderColor: CATEGORY_META[key].color,
+                data: (payload.buckets || []).map(function (bucket) {
+                    return Number(bucket[key]) || 0;
+                })
+            };
+        });
+    }
+
+    function render(payload) {
+        chart.data.labels = (payload.buckets || []).map(function (bucket) {
+            return bucket.label;
+        });
+        chart.data.datasets = buildDatasets(payload);
+        chart.update();
+
+        var selected = categoryEl.value || 'all';
+        var periodText = periodEl.options[periodEl.selectedIndex].text;
+        var total = selected === 'all'
+            ? Number(payload.totals && payload.totals.total) || 0
+            : Number(payload.totals && payload.totals[selected]) || 0;
+        var categoryText = selected === 'all'
+            ? 'Show All'
+            : CATEGORY_META[selected].label;
+
+        summaryEl.textContent = 'Total schedules: ' + total +
+            ' (' + periodText + ' \u00b7 ' + categoryText + ')';
+        errorEl.style.display = 'none';
+    }
+
+    function fail(message) {
+        summaryEl.textContent = 'Total schedules: unavailable';
+        errorEl.textContent = message;
+        errorEl.style.display = 'block';
+    }
+
+    function load() {
+        summaryEl.textContent = 'Total schedules: loading...';
+        var url = '<?= uri() ?>/bsa/api/schedule-stats.php?period=' +
+            encodeURIComponent(periodEl.value) + '&_=' + Date.now();
+
+        fetch(url, { credentials: 'same-origin' })
+            .then(function (response) {
+                if (!response.ok) {
+                    throw new Error('Request failed with status ' + response.status + '.');
+                }
+                return response.json();
+            })
+            .then(function (payload) {
+                if (!payload || payload.success !== true) {
+                    throw new Error((payload && payload.message) || 'Unable to load schedule counts.');
+                }
+                render(payload);
+            })
+            .catch(function (err) {
+                fail(err && err.message ? err.message : 'Unable to load schedule counts.');
+            });
+    }
+
+    periodEl.addEventListener('change', load);
+    categoryEl.addEventListener('change', load);
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', load);
+    } else {
+        load();
+    }
 })();
 </script>

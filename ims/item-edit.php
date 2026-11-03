@@ -12,6 +12,7 @@ if (!$itemRecord) {
     return;
 }
 $itemUnits = query('SELECT * FROM item_units WHERE item_id = ? ORDER BY FIELD(unit, "bottle","gallon","piece","unit","pack","can","pouch","bundle","roll","tube","pad","box","ream","book","cart","license","ticket","lot","set"), unit', [$itemId]);
+$groupOptions = query("SELECT DISTINCT item_group FROM items WHERE item_group IS NOT NULL AND item_group <> '' ORDER BY item_group ASC");
 
 $priceHistory = query(
     "SELECT h.id, h.price_date, h.old_cost, h.new_cost, h.reference, h.remarks,
@@ -29,6 +30,7 @@ $item = [
     'id' => $itemId,
     'stock_no' => $submitting ? trim($_POST['stock_no'] ?? '') : $itemRecord['stock_no'],
     'description' => $submitting ? trim($_POST['description'] ?? '') : $itemRecord['description'],
+    'item_group' => $submitting ? trim($_POST['item_group'] ?? '') : ($itemRecord['item_group'] ?? ''),
     'unit' => $submitting ? trim($_POST['unit'] ?? '') : $itemRecord['unit'],
     'pcs_per_unit' => (int) $itemRecord['pcs_per_unit'],
     'number_of_units' => (int) $itemRecord['number_of_units'],
@@ -69,6 +71,15 @@ messageAlert($showAlert ?? false, $message ?? '', $success ?? true);
                 </div>
             </div>
             <div class="form-group"><label>Description <span class="text-danger">*</span></label><input class="form-control" name="description" required value="<?= e($item['description']) ?>"></div>
+            <div class="form-group">
+                <label>Group / Category</label>
+                <input class="form-control" name="item_group" list="item-group-options" value="<?= e($item['item_group']) ?>" placeholder="Select or type a group">
+                <datalist id="item-group-options">
+                    <?php foreach ($groupOptions as $groupOption): ?>
+                        <option value="<?= e($groupOption['item_group']) ?>"></option>
+                    <?php endforeach; ?>
+                </datalist>
+            </div>
             <div class="form-row">
                 <div class="form-group col-md-3"><label>Total units</label><input class="form-control" type="number" min="0" name="total_units" value="<?= $item['total_units'] ?: '' ?>"></div>
                 <div class="form-group col-md-3"><label>Unit cost</label><input class="form-control" type="number" min="0" step="0.01" name="unit_cost" value="<?= e($item['unit_cost']) ?>"></div>

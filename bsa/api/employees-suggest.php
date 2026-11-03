@@ -14,12 +14,6 @@ if (empty($GLOBALS['userId'] ?? null)) {
     exit;
 }
 
-if (!userRole($GLOBALS['userId'], 'bsa')) {
-    http_response_code(403);
-    echo json_encode(['success' => false, 'error' => 'FORBIDDEN', 'message' => 'You do not have permission to search employee records.']);
-    exit;
-}
-
 $q = trim((string) ($_GET['q'] ?? ''));
 if (mb_strlen($q) < 2) {
     echo json_encode([]);

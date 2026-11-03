@@ -9,12 +9,12 @@ require_once __DIR__ . '/includes/dtcsc-optional.php';
 require_once __DIR__ . '/includes/job-order-tables.php';
 require_once __DIR__ . '/../includes/database/database.php';
 require_once __DIR__ . '/../includes/database/account.php';
+require_once __DIR__ . '/includes/bsa-access.php';
 
-if (empty($GLOBALS['userId'] ?? null) || !userRole($GLOBALS['userId'], 'bsa')) {
+if (empty($GLOBALS['userId'] ?? null) || !canAccessBookingApprovals($GLOBALS['userId'])) {
     echo '<div class="card shadow mb-4"><div class="card-header py-3"><h6 class="m-0 font-weight-bold text-primary">Booking Approvals</h6></div>'
         . '<div class="card-body"><div class="alert alert-danger mb-0"><i class="fa fa-ban mr-2"></i><strong>Access denied.</strong> '
-        . 'You need the <em>Booking &amp; Schedule Approvals (BSA)</em> system role to view booking approvals. '
-        . 'Contact your division DMIS administrator to be granted access.</div></div></div>';
+        . 'Only the DTC Manager (Administrative Officer V) and the Facility Coordinator (Administrative Aide VI) may view booking approvals.</div></div></div>';
     return;
 }
 
@@ -121,6 +121,19 @@ function jobOrderTrackData(array $row): string {
         $out .= ' data-' . $key . '="' . htmlspecialchars($value, ENT_QUOTES) . '"';
     }
     return $out;
+}
+
+/**
+ * Badge class for a job order tracking status. Completed is green (badge-success),
+ * work in progress is blue, and the other states are colour-coded accordingly.
+ */
+function jobOrderTrackingBadgeClass(string $value): string {
+    switch ($value) {
+        case 'completed': return 'badge-success';
+        case 'on_hold':   return 'badge-warning';
+        case 'backlog':   return 'badge-secondary';
+        default:          return 'badge-info';
+    }
 }
 
 $booking = null;
@@ -923,7 +936,7 @@ foreach (['dtcsc_flash', 'vehicle_flash', 'joborder_flash'] as $flashKey) {
             <div class="card shadow mb-4">
                 <div class="card-header py-3 d-flex align-items-center justify-content-between">
                     <h6 class="m-0 font-weight-bold text-primary"><i class="fa fa-clipboard-check mr-1"></i>Tracking Details</h6>
-                    <span class="badge badge-<?php echo $viewTracking === 'completed' ? 'success' : ($viewTracking === 'on_hold' ? 'warning' : ($viewTracking === 'backlog' ? 'secondary' : 'info')); ?>"><?php echo htmlspecialchars(jobOrderTrackingRemarksLabel($viewTracking)); ?></span>
+                            <span class="badge <?php echo jobOrderTrackingBadgeClass($viewTracking); ?>"><?php echo htmlspecialchars(jobOrderTrackingRemarksLabel($viewTracking)); ?></span>
                 </div>
                 <div class="card-body">
                     <?php if (!$viewHasTrack): ?>
@@ -1024,9 +1037,6 @@ foreach (['dtcsc_flash', 'vehicle_flash', 'joborder_flash'] as $flashKey) {
                         <p class="text-muted mb-0">This job order request is not awaiting a decision.</p>
                     <?php endif; ?>
                     <?php if ($jobOrder['status'] === 'approved'): ?>
-                        <a href="<?php echo uri(); ?>/bsa/job-order-tracking.php?id=<?php echo (int)$jobOrder['id']; ?>" target="_blank" class="btn btn-outline-primary btn-block mt-3" title="Printable Track form">
-                            <i class="fa fa-print mr-1"></i>Print Track Form
-                        </a>
                         <button type="button" class="btn btn-primary btn-block mt-2 js-track-open"<?php echo jobOrderTrackData($jobOrder); ?>>
                             <i class="fa fa-clipboard-check mr-1"></i>Track Job Order
                         </button>
@@ -1313,6 +1323,7 @@ foreach (['dtcsc_flash', 'vehicle_flash', 'joborder_flash'] as $flashKey) {
                                 <th>Facility / Vehicle</th>
                                 <th>Schedule</th>
                                 <th>Status</th>
+                                <th>Progress</th>
                                 <th class="text-right">Action</th>
                             </tr>
                         </thead>
@@ -1333,6 +1344,7 @@ foreach (['dtcsc_flash', 'vehicle_flash', 'joborder_flash'] as $flashKey) {
                                             <span class="text-muted"><?php echo formatTime($row['depart_time']); ?><?php echo $row['return_date'] ? ' &middot; Return: ' . formatDate($row['return_date']) . ' ' . ($row['return_time'] ? formatTime($row['return_time']) : '') : ''; ?></span>
                                         </td>
                                         <td><span class="badge <?php echo vehicleBadgeClass($row['status']); ?>"><?php echo vehicleStatusLabel($row['status']); ?></span></td>
+                                        <td class="text-muted small">&mdash;</td>
                                         <td class="text-right">
                                             <a href="<?php echo $listUrl; ?>&id=<?php echo (int)$row['id']; ?>&type=vehicle" class="btn btn-sm btn-outline-primary">View</a>
                                             <?php if ($row['status'] === 'available'): ?>
@@ -1355,6 +1367,7 @@ foreach (['dtcsc_flash', 'vehicle_flash', 'joborder_flash'] as $flashKey) {
                                             <span class="text-muted"><?php echo formatTime($row['start_time']); ?> - <?php echo $row['end_time'] ? formatTime($row['end_time']) : 'open end'; ?></span>
                                         </td>
                                         <td><span class="badge <?php echo badgeClass($row['status']); ?>"><?php echo ucfirst($row['status']); ?></span></td>
+                                        <td class="text-muted small">&mdash;</td>
                                         <td class="text-right">
                                             <a href="<?php echo $listUrl; ?>&id=<?php echo (int)$row['id']; ?>&type=local" class="btn btn-sm btn-outline-primary">View</a>
                                             <?php if ($row['status'] === 'approved'): ?>
@@ -1374,6 +1387,17 @@ foreach (['dtcsc_flash', 'vehicle_flash', 'joborder_flash'] as $flashKey) {
                                         </td>
                                         <td class="small"><?php echo formatDate($row['date_request']); ?></td>
                                         <td><span class="badge <?php echo badgeClass($row['status']); ?>"><?php echo ucfirst($row['status']); ?></span></td>
+                                        <td>
+                                            <?php if ($row['status'] === 'approved'): ?>
+                                                <?php $rowTrack = (string) ($row['tracking_remarks'] ?: 'work_in_progress'); ?>
+                                                <span class="badge <?php echo jobOrderTrackingBadgeClass($rowTrack); ?>"><?php echo htmlspecialchars(jobOrderTrackingRemarksLabel($rowTrack)); ?></span>
+                                                <?php if (!empty($row['tracking_updated_at'])): ?>
+                                                    <br><span class="text-muted small">Updated <?php echo date(DISPLAY_DATETIME_FORMAT, strtotime((string) $row['tracking_updated_at'])); ?></span>
+                                                <?php endif; ?>
+                                            <?php else: ?>
+                                                <span class="text-muted small">&mdash;</span>
+                                            <?php endif; ?>
+                                        </td>
                                         <td class="text-right">
                                             <a href="<?php echo $listUrl; ?>&id=<?php echo (int)$row['id']; ?>&type=joborder" class="btn btn-sm btn-outline-primary">View</a>
                                             <?php if ($row['status'] === 'approved'): ?>
@@ -1383,6 +1407,8 @@ foreach (['dtcsc_flash', 'vehicle_flash', 'joborder_flash'] as $flashKey) {
                                         </td>
                                     </tr>
                                 <?php else: ?>
+                                    <tr>
+                                        <td><span class="badge badge-primary">Facility</span></td>
                                         <td class="font-weight-bold"><?php echo htmlspecialchars($row['booking_reference']); ?></td>
                                         <td><?php echo htmlspecialchars($row['activity_title']); ?></td>
                                         <td><?php echo htmlspecialchars($row['requesting_office']); ?></td>
@@ -1395,6 +1421,7 @@ foreach (['dtcsc_flash', 'vehicle_flash', 'joborder_flash'] as $flashKey) {
                                             <span class="text-muted"><?php echo formatTime($row['start_time']); ?> - <?php echo formatTime($row['end_time']); ?></span>
                                         </td>
                                         <td><span class="badge <?php echo badgeClass($row['status']); ?>"><?php echo ucfirst($row['status']); ?></span></td>
+                                        <td class="text-muted small">&mdash;</td>
                                         <td class="text-right">
                                             <a href="<?php echo $listUrl; ?>&id=<?php echo (int)$row['booking_id']; ?>" class="btn btn-sm btn-outline-primary">View</a>
                                             <?php if ($row['status'] === 'approved'): ?>

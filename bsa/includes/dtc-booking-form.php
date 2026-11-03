@@ -8,7 +8,7 @@
 <div class="form-head">
     <h2>Division Training Center (DTC) Booking Form</h2>
     <p>Republic of the Philippines &middot; Department of Education &middot; Region IX &middot; Schools Division of Dipolog City</p>
-    <div class="control-no"><span class="bi bi-ticket-perforated me-1"></span>Booking Ref.: <span id="bookingRefDisplay">assigned upon submission</span></div>
+    <div class="control-no"><span class="icon-ticket me-1"></span>Booking Ref.: <span id="bookingRefDisplay">assigned upon submission</span></div>
 </div>
 
 <div class="booking-form-container">
@@ -255,7 +255,7 @@
                         <input type="text" class="form-control" id="requested_by_name" name="requested_by_name" value="<?php echo htmlspecialchars($prefill['requested_by_name']); ?>" autocomplete="off" required>
                         <div class="dtc-autocomplete-suggestions"></div>
                     </div>
-                    <div class="auto-note"><i class="bi bi-person-check me-1"></i>Type to search; position &amp; signature auto-fill.</div>
+                    <div class="auto-note"><i class="icon-user me-1"></i>Type to search; position &amp; signature auto-fill.</div>
                 </div>
                 <div class="col-md-6">
                     <label for="requested_by_position" class="form-label">Position <span class="text-danger">*</span></label>
@@ -278,7 +278,7 @@
                         <input type="text" class="form-control" id="concurred_by_name" name="concurred_by_name" value="<?php echo htmlspecialchars($prefill['concurred_by_name']); ?>" autocomplete="off" required>
                         <div class="dtc-autocomplete-suggestions"></div>
                     </div>
-                    <div class="auto-note"><i class="bi bi-person-check me-1"></i>Suggestions resolve to the office head of the selected employee.</div>
+                    <div class="auto-note"><i class="icon-user me-1"></i>Suggestions resolve to the office head of the selected employee.</div>
                 </div>
                 <div class="col-md-6">
                     <label for="concurred_by_position" class="form-label">Position <span class="text-danger">*</span></label>
@@ -303,7 +303,7 @@
             <h3 class="mb-4">Step 5: Review &amp; Submit</h3>
 
             <div class="alert alert-info">
-                <i class="bi bi-info-circle me-2"></i>
+                <i class="icon-info-circle me-2"></i>
                 Please review all information before submitting your facility booking.
             </div>
 
@@ -320,8 +320,8 @@
 
             <div class="form-navigation">
                 <button type="button" class="btn btn-secondary prev-step"><i class="icon-arrow-left me-2"></i>Previous</button>
-                <button type="submit" class="btn btn-success btn-lg">
-                    <i class="bi bi-check-circle me-2"></i>Submit Booking
+                <button type="submit" class="btn btn-success">
+                    <i class="icon-check-circle me-2"></i>Submit Booking
                 </button>
             </div>
         </div>
@@ -725,7 +725,7 @@
                             $('.form-step').removeClass('active').hide();
                             $('#bookingSummary').html(
                                 '<div class="success-message">' +
-                                    '<div class="success-icon"><i class="bi bi-check-circle"></i></div>' +
+                                    '<div class="success-icon"><i class="icon-check-circle"></i></div>' +
                                     '<h1>Booking Submitted</h1>' +
                                     '<p class="text-muted">Your facility booking request has been submitted successfully and is now pending approval.</p>' +
                                     '<p class="mb-0"><strong>Booking Ref.:</strong> ' + response.booking_reference + '</p>' +

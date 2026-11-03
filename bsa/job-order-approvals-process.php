@@ -8,6 +8,7 @@ require_once(__DIR__ . '/../includes/database/database.php');
 require_once(__DIR__ . '/../includes/database/account.php');
 require_once(__DIR__ . '/../includes/database/system-log.php');
 require_once(__DIR__ . '/includes/job-order-tables.php');
+require_once(__DIR__ . '/includes/bsa-access.php');
 
 $listUrl = uri() . '/bsa/?v=' . encode('Booking Approvals');
 
@@ -34,7 +35,7 @@ if (empty($GLOBALS['userId'] ?? null)) {
     $respond(['success' => false, 'message' => 'Please log in before deciding a job order request.'], uri() . '/login', $isAjax ? 401 : 302);
 }
 
-if (!userRole($GLOBALS['userId'], 'bsa')) {
+if (!canAccessBookingApprovals($GLOBALS['userId'])) {
     $respond(['success' => false, 'message' => 'You do not have permission to decide job order requests.'], uri() . '/bsa/');
 }
 

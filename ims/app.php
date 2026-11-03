@@ -1275,6 +1275,69 @@ if (isset($_POST['delete-plan'])) {
     }
 }
 
+// ========== Suppliers ==========
+
+if (isset($_POST['save-supplier'])) {
+    $name = trim($_POST['name'] ?? '');
+    $address = trim($_POST['address'] ?? '');
+    $contact = trim($_POST['contact'] ?? '');
+    $showAlert = true;
+    $success = false;
+
+    if ($name === '') {
+        $message = 'Supplier name is required.';
+        return;
+    }
+
+    if (find('SELECT id FROM suppliers WHERE name = ?', [$name])) {
+        $message = 'A supplier with that name already exists.';
+        return;
+    }
+
+    $result = insert('suppliers', [
+        'name' => $name,
+        'address' => $address !== '' ? $address : null,
+        'contact' => $contact !== '' ? $contact : null,
+    ]);
+
+    if ($result === false) {
+        $message = 'The supplier could not be saved.';
+        return;
+    }
+
+    createSystemLog($stationId, $userId, 'Added supplier ' . $name, $result, clientIp());
+    $_SESSION["{$prefix}stock_flash"] = ['success' => true, 'message' => "Supplier {$name} added successfully."];
+    redirect(customUri('ims', 'Supplier'));
+}
+
+if (isset($_POST['delete-supplier'])) {
+    $deleteId = (int) sanitize(decipher($_POST['verifier'] ?? ''));
+    $showAlert = true;
+    $success = false;
+
+    $supplier = $deleteId > 0 ? find('SELECT id, name FROM suppliers WHERE id = ?', [$deleteId]) : false;
+    if (!$supplier) {
+        $message = 'Supplier not found.';
+        return;
+    }
+
+    $prRow = find('SELECT COUNT(*) AS total FROM purchase_requests WHERE supplier_id = ?', [$deleteId]);
+    $prCount = $prRow ? (int) $prRow['total'] : 0;
+    if ($prCount > 0) {
+        $message = "Supplier {$supplier['name']} is used by {$prCount} purchase request(s) and cannot be deleted.";
+        return;
+    }
+
+    $result = delete('suppliers', '`id` = ?', [$deleteId]);
+    if ($result !== false) {
+        createSystemLog($stationId, $userId, 'Deleted supplier ' . $supplier['name'], $deleteId, clientIp());
+        $_SESSION["{$prefix}stock_flash"] = ['success' => true, 'message' => 'Supplier deleted successfully.'];
+        redirect(customUri('ims', 'Supplier'));
+    } else {
+        $message = 'Failed to delete supplier. Please try again.';
+    }
+}
+
 // ========== Stock and Inventory ==========
 
 if (isset($_POST['save-pr'])) {
@@ -1382,6 +1445,7 @@ if (isset($_POST['save-item'])) {
 
     $stockNo = trim($_POST['stock_no'] ?? '');
     $description = trim($_POST['description'] ?? '');
+    $itemGroup = trim($_POST['item_group'] ?? '');
     $unit = trim($_POST['unit'] ?? '');
     $existing = $editId > 0 ? find('SELECT pcs_per_unit, number_of_units, number_units_unit, total_units FROM items WHERE id = ?', [$editId]) : null;
     $pcsPerUnit = array_key_exists('pcs_per_unit', $_POST) ? (int) $_POST['pcs_per_unit'] : (int) ($existing['pcs_per_unit'] ?? 0);
@@ -1434,6 +1498,10 @@ if (isset($_POST['save-item'])) {
         'transfer_to' => $itemStatus === 'Transferred' ? $transferTo : null,
         'remarks'     => $remarks,
     ];
+
+    if (array_key_exists('item_group', $_POST)) {
+        $data['item_group'] = $itemGroup !== '' ? $itemGroup : null;
+    }
 
     if ($editId > 0) {
         $result = update('items', $data, '`id` = ?', [$editId]);

@@ -3,12 +3,13 @@
 require_once(__DIR__ . '/../includes/function.php');
 require_once(__DIR__ . '/../includes/database/database.php');
 require_once(__DIR__ . '/../includes/database/account.php');
+require_once(__DIR__ . '/includes/bsa-access.php');
 
 if (empty($GLOBALS['userId'] ?? null)) {
     redirect(uri() . '/login');
 }
 
-if (!userRole($GLOBALS['userId'], 'bsa')) {
+if (!canAccessBookingApprovals($GLOBALS['userId'])) {
     $_SESSION['vehicle_flash'] = ['type' => 'danger', 'message' => 'You do not have permission to decide vehicle requests.'];
     header('Location: ' . uri() . '/bsa/');
     exit;
