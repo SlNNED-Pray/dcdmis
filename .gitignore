@@ -1,3 +1,11 @@
 /temp/
 /uploads/
 /includes/config.php
+/backups
+/.github
+/ims/SKILL.md
+/.opencode
+/nbproject
+.DS_Store
+*.html
+*.txt
