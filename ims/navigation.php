@@ -3,6 +3,29 @@ require_once(__DIR__ . '/helpers.php');
 
 function imsNav(string $active): void
 {
+    ?>
+    <script>
+    (function () {
+        document.addEventListener('click', function (e) {
+            var trigger = e.target && e.target.closest ? e.target.closest('[data-target="#risModal"]') : null;
+            if (!trigger) return;
+            // Bootstrap is not loaded yet (for example while a large page is still
+            // parsing). Remember the click and open the modal once it is ready.
+            if (window.jQuery && window.jQuery.fn && window.jQuery.fn.modal) return;
+            window.__imsRisPending = true;
+            if (!window.__imsRisLoadBound) {
+                window.__imsRisLoadBound = true;
+                window.addEventListener('load', function () {
+                    if (window.__imsRisPending && window.jQuery && window.jQuery.fn && window.jQuery.fn.modal) {
+                        window.__imsRisPending = false;
+                        window.jQuery('#risModal').modal('show');
+                    }
+                });
+            }
+        }, true);
+    })();
+    </script>
+    <?php
     $links = [
         'inventory' => ['Stock and Inventory', 'fa-boxes'],
         'ris' => ['Requisition Slips', 'fa-file-invoice'],

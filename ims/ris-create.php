@@ -3,8 +3,31 @@ require_once(__DIR__ . '/navigation.php');
 require_once(root() . '/ims/helpers.php');
 
 $pdo = connection();
-$employees = $pdo->query("SELECT id, CONCAT(last_name, ', ', first_name, IFNULL(CONCAT(' ', middle_name), ''), IFNULL(CONCAT(' ', name_extension), '')) AS name FROM employees ORDER BY last_name, first_name")->fetchAll();
+$employees = $pdo->query(
+    "SELECT e.id,
+            CONCAT(e.last_name, ', ', e.first_name, IFNULL(CONCAT(' ', e.middle_name), ''), IFNULL(CONCAT(' ', e.name_extension), '')) AS name,
+            sa.station_id,
+            s.name AS section_name,
+            fd.name AS section_division,
+            sc.name AS school_name
+     FROM employees e
+     LEFT JOIN (
+         SELECT sa2.employee_id, MIN(sa2.station_id) AS station_id
+         FROM station_assignments sa2
+         INNER JOIN (
+             SELECT employee_id, MAX(assignment_date) AS assignment_date
+             FROM station_assignments
+             GROUP BY employee_id
+         ) latest ON latest.employee_id = sa2.employee_id AND latest.assignment_date = sa2.assignment_date
+         GROUP BY sa2.employee_id
+     ) sa ON sa.employee_id = e.id
+     LEFT JOIN sections s ON s.id = sa.station_id
+     LEFT JOIN functional_divisions fd ON fd.id = s.functional_division_id
+     LEFT JOIN schools sc ON sc.id = sa.station_id
+     ORDER BY e.last_name, e.first_name"
+)->fetchAll();
 $functionalDivisions = $pdo->query("SELECT id, name FROM functional_divisions ORDER BY name")->fetchAll();
+$sectionsList = $pdo->query("SELECT id, name FROM sections ORDER BY name")->fetchAll();
 $items = $pdo->query('SELECT id, stock_no, description, unit, quantity, min_qty, pcs_per_unit, total_units FROM items ORDER BY description')->fetchAll();
 $itemUnits = $pdo->query('SELECT item_id, unit, pcs_per_unit FROM item_units ORDER BY item_id')->fetchAll();
 $unitOrder = ['bottle','gallon','piece','unit','pack','can','pouch','bundle','roll','tube','pad','box','ream','book','cart','license','ticket','lot','set'];
@@ -45,8 +68,18 @@ $itemJson = json_encode(array_map(static function ($item) use ($unitsMap) {
     ];
 }, $items), JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
 $employeeJson = json_encode(array_map(static function ($e) {
-    $dinfo = risDivisionOfficeFromEmployee((int) $e['id']);
-    return ['id' => (int) $e['id'], 'name' => $e['name'], 'division' => $dinfo['division'], 'office' => $dinfo['office']];
+    $division = '';
+    $office = '';
+    if (!empty($e['section_name'])) {
+        $division = (string) ($e['section_division'] ?? '');
+        $office = (string) $e['section_name'];
+    } elseif (!empty($e['school_name'])) {
+        $division = 'Dipolog City Schools Division Office';
+        $office = (string) $e['school_name'];
+    } elseif (!empty($e['station_id'])) {
+        $office = (string) $e['station_id'];
+    }
+    return ['id' => (int) $e['id'], 'name' => $e['name'], 'division' => $division, 'office' => $office];
 }, $employees), JSON_UNESCAPED_UNICODE);
 $selectedEmployee = (int) ($_POST['employee_id'] ?? 0);
 $fromItemId = (int) (decode($_GET['id'] ?? '') ?: 0);
@@ -93,10 +126,17 @@ if ($selectedEmployee > 0) {
 <?php $employeeDinfo = $selectedEmployee > 0 ? risDivisionOfficeFromEmployee($selectedEmployee) : ['division' => '', 'office' => '']; ?>
 <?php if ($selectedDivision === '' && !empty($employeeDinfo['division'])) { $selectedDivision = $employeeDinfo['division']; } ?>
 <?php $prefillOffice = $employeeDinfo['office']; ?>
+<?php $useDivisionSelect = ($prefillOffice === 'Dipolog City Schools Division Office'); ?>
 <div class="form-row">
     <div class="form-group col-md-6">
         <label>Division</label>
-        <input class="form-control" type="text" name="division" value="<?= e($selectedDivision) ?>" readonly required placeholder=" ">
+        <input class="form-control ris-division-text<?= $useDivisionSelect ? ' d-none' : '' ?>" type="text" name="division" value="<?= e($selectedDivision) ?>" readonly required placeholder=" "<?= $useDivisionSelect ? ' disabled' : '' ?>>
+        <select class="form-control ris-division-select<?= $useDivisionSelect ? '' : ' d-none' ?>" name="division" required<?= $useDivisionSelect ? '' : ' disabled' ?>>
+            <option value="">Select division</option>
+            <?php foreach ($sectionsList as $sectionRow): ?>
+                <option value="<?= e($sectionRow['name']) ?>" <?= $selectedDivision === $sectionRow['name'] ? 'selected' : '' ?>><?= e($sectionRow['name']) ?></option>
+            <?php endforeach; ?>
+        </select>
     </div>
     <div class="form-group col-md-6">
         <label>Office</label>
@@ -292,6 +332,54 @@ function esc(s) {
     d.textContent = String(s == null ? '' : s);
     return d.innerHTML;
 }
+function resetRisForm() {
+    var empSearch = document.querySelector('.emp-search');
+    var empId = document.querySelector('.emp-id');
+    var empList = document.querySelector('.emp-suggestions');
+    if (empSearch) empSearch.value = '';
+    if (empId) empId.value = '0';
+    if (empList) { empList.innerHTML = ''; empList.style.display = 'none'; }
+
+    var officeEl = document.querySelector('.ris-office-display');
+    if (officeEl) officeEl.value = '';
+    var divText = document.querySelector('.ris-division-text');
+    var divSelect = document.querySelector('.ris-division-select');
+    if (divText) { divText.value = ''; divText.classList.remove('d-none'); divText.disabled = false; }
+    if (divSelect) { divSelect.value = ''; divSelect.classList.add('d-none'); divSelect.disabled = true; }
+
+    var purpose = document.querySelector('#risModal [name="purpose"]');
+    if (purpose) purpose.value = '';
+
+    var container = document.getElementById('ris-items');
+    if (!container) return;
+    var rows = container.querySelectorAll('.ris-item-row');
+    for (var i = 1; i < rows.length; i++) { rows[i].remove(); }
+    var row = container.querySelector('.ris-item-row');
+    if (!row) return;
+    var search = row.querySelector('.item-search');
+    if (search) search.value = '';
+    var hidden = row.querySelector('.item-id');
+    if (hidden) hidden.value = '';
+    var unit = row.querySelector('.item-unit');
+    if (unit) { unit.innerHTML = '<option value="">Unit</option>'; unit.disabled = true; }
+    var pcs = row.querySelector('.item-unit-pcs');
+    if (pcs) pcs.value = '1';
+    var qty = row.querySelector('[name="quantity[]"]');
+    if (qty) qty.value = '';
+    row.setAttribute('data-onhand', '0');
+    var avail = row.querySelector('.item-avail');
+    if (avail) avail.textContent = '';
+    var suggestions = row.querySelector('.item-suggestions');
+    if (suggestions) { suggestions.innerHTML = ''; suggestions.style.display = 'none'; }
+    var warn = row.querySelector('.item-stock-warn');
+    if (warn) { warn.textContent = ''; warn.classList.add('d-none'); }
+}
+document.addEventListener('click', function (e) {
+    var trigger = e.target.closest ? e.target.closest('[data-target="#risModal"]') : null;
+    if (!trigger) return;
+    if (trigger.classList.contains('ris-quick-btn')) return;
+    resetRisForm();
+});
 
 document.addEventListener('DOMContentLoaded', function () {
     document.querySelectorAll('.ris-item-row').forEach(function (row) { bindItemSearch(row); syncUnitPcs(row); });
@@ -354,15 +442,24 @@ document.addEventListener('click', function (e) {
     }
     function updateOfficeDisplay(empId) {
         var officeEl = document.querySelector('.ris-office-display');
-        var divInput = document.querySelector('[name="division"]');
+        var divText = document.querySelector('.ris-division-text');
+        var divSelect = document.querySelector('.ris-division-select');
         var emp = EMPLOYEES.filter(function (e) { return String(e.id) === String(empId); })[0];
-        if (officeEl) officeEl.value = emp ? (emp.office || '') : '';
-        if (divInput) {
-            if (emp && emp.division) {
-                divInput.value = emp.division;
-            } else if (!emp) {
-                divInput.value = '';
-            }
+        var office = emp ? (emp.office || '') : '';
+        if (officeEl) officeEl.value = office;
+        var isDivisionOffice = (office === 'Dipolog City Schools Division Office');
+        if (divText) {
+            divText.classList.toggle('d-none', isDivisionOffice);
+            divText.disabled = isDivisionOffice;
+        }
+        if (divSelect) {
+            divSelect.classList.toggle('d-none', !isDivisionOffice);
+            divSelect.disabled = !isDivisionOffice;
+        }
+        if (isDivisionOffice) {
+            if (divSelect) divSelect.value = '';
+        } else if (divText) {
+            divText.value = emp ? (emp.division || '') : '';
         }
     }
     function hideResults() { list.style.display = 'none'; }

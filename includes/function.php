@@ -43,7 +43,11 @@ function decode($string)
 
 function root()
 {
-    return !empty($_SERVER['DOCUMENT_ROOT']) ? $_SERVER['DOCUMENT_ROOT'] : dirname(__DIR__);
+    static $root = null;
+    if ($root === null) {
+        $root = rtrim(str_replace('\\', '/', dirname(__DIR__)), '/');
+    }
+    return $root;
 }
 
 function uri($domain = null)

@@ -15,6 +15,10 @@ uksort($grouped, 'strnatcasecmp');
 
 $groupFilter = trim((string) ($_GET['group'] ?? ''));
 $itemFilter = (int) ($_GET['item'] ?? 0);
+$stockFilter = trim((string) ($_GET['stock'] ?? ''));
+if (!in_array($stockFilter, ['available', 'out'], true)) {
+    $stockFilter = '';
+}
 
 $items = $allItems;
 if ($itemFilter > 0) {
@@ -22,10 +26,110 @@ if ($itemFilter > 0) {
 } elseif ($groupFilter !== '' && isset($grouped[$groupFilter])) {
     $items = $grouped[$groupFilter];
 }
+if ($stockFilter === 'available') {
+    $items = array_values(array_filter($items, static fn (array $row): bool => (int) $row['quantity'] > 0));
+} elseif ($stockFilter === 'out') {
+    $items = array_values(array_filter($items, static fn (array $row): bool => (int) $row['quantity'] <= 0));
+}
 
 $itemDropdownGroups = ($itemFilter === 0 && $groupFilter !== '' && isset($grouped[$groupFilter]))
     ? [$groupFilter => $grouped[$groupFilter]]
     : $grouped;
+
+$dateMode = trim((string) ($_GET['date_mode'] ?? ''));
+if (!in_array($dateMode, ['as_of', 'range'], true)) {
+    $dateMode = '';
+}
+$asOfDate = trim((string) ($_GET['as_of'] ?? ''));
+$fromDate = trim((string) ($_GET['from_date'] ?? ''));
+$toDate = trim((string) ($_GET['to_date'] ?? ''));
+$isValidDate = static function (string $value): bool {
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $value)) {
+        return false;
+    }
+    [$year, $month, $day] = array_map('intval', explode('-', $value));
+    return checkdate($month, $day, $year);
+};
+if (!$isValidDate($asOfDate)) {
+    $asOfDate = '';
+}
+if (!$isValidDate($fromDate)) {
+    $fromDate = '';
+}
+if (!$isValidDate($toDate)) {
+    $toDate = '';
+}
+if ($dateMode === 'as_of' && $asOfDate === '') {
+    $dateMode = '';
+}
+if ($dateMode === 'range' && $fromDate === '' && $toDate === '') {
+    $dateMode = '';
+}
+if ($dateMode === 'range' && $fromDate !== '' && $toDate !== '' && $fromDate > $toDate) {
+    [$fromDate, $toDate] = [$toDate, $fromDate];
+}
+
+$dateInfo = [];
+if ($dateMode !== '') {
+    $movementsByItem = [];
+    $movementRows = connection()->query('SELECT item_id, quantity, created_at FROM stock_movements ORDER BY created_at')->fetchAll();
+    foreach ($movementRows as $movementRow) {
+        $movementsByItem[(int) $movementRow['item_id']][] = $movementRow;
+    }
+
+    $asOfEnd = $asOfDate !== '' ? $asOfDate . ' 23:59:59' : '';
+    $rangeStart = $fromDate !== '' ? $fromDate . ' 00:00:00' : '0000-00-00 00:00:00';
+    $rangeEnd = $toDate !== '' ? $toDate . ' 23:59:59' : '9999-12-31 23:59:59';
+
+    foreach ($allItems as $row) {
+        $itemId = (int) $row['id'];
+        $movements = $movementsByItem[$itemId] ?? [];
+        $firstEntry = (string) ($row['created_at'] ?? '');
+        foreach ($movements as $movement) {
+            if ($firstEntry === '' || $movement['created_at'] < $firstEntry) {
+                $firstEntry = (string) $movement['created_at'];
+            }
+        }
+
+        $info = [
+            'first_entry' => $firstEntry,
+            'as_of_qty' => (int) $row['quantity'],
+            'range_qty' => 0,
+            'range_count' => 0,
+        ];
+        $afterQty = 0;
+        foreach ($movements as $movement) {
+            $movementDate = (string) $movement['created_at'];
+            $endBoundary = $dateMode === 'as_of' ? $asOfEnd : $rangeEnd;
+            if ($movementDate > $endBoundary) {
+                $afterQty += (int) $movement['quantity'];
+            }
+            if ($dateMode === 'range' && $movementDate >= $rangeStart && $movementDate <= $rangeEnd) {
+                $info['range_qty'] += (int) $movement['quantity'];
+                $info['range_count']++;
+            }
+        }
+        $info['as_of_qty'] = (int) $row['quantity'] - $afterQty;
+        $dateInfo[$itemId] = $info;
+    }
+
+    if ($dateMode === 'as_of') {
+        $asOfEnd = $asOfDate . ' 23:59:59';
+        $items = array_values(array_filter($items, static function (array $row) use ($dateInfo, $asOfEnd): bool {
+            $info = $dateInfo[(int) $row['id']] ?? null;
+            return $info !== null && $info['first_entry'] !== '' && $info['first_entry'] <= $asOfEnd;
+        }));
+    } else {
+        $items = array_values(array_filter($items, static function (array $row) use ($dateInfo): bool {
+            return ($dateInfo[(int) $row['id']]['range_count'] ?? 0) > 0;
+        }));
+    }
+}
+
+$asOfLabel = $asOfDate !== '' ? date('M d, Y', strtotime($asOfDate)) : '';
+$rangeLabel = ($fromDate !== '' ? date('M d, Y', strtotime($fromDate)) : 'First entry')
+    . ' – '
+    . ($toDate !== '' ? date('M d, Y', strtotime($toDate)) : 'Today');
 
 messageAlert($showAlert ?? false, $message ?? '', $success ?? true);
 contentTitle('Stock and Inventory');
@@ -38,49 +142,83 @@ imsNav('inventory');
         <button type="button" class="btn btn-primary btn-sm" data-toggle="modal" data-target="#itemModal"><i class="fas fa-plus"></i> Add item</button>
     </div>
     <div class="card-body">
-        <form method="get" class="form-row align-items-end mb-3">
+        <form method="get" class="mb-3">
             <input type="hidden" name="v" value="<?= e(cipher('Stock and Inventory')) ?>">
-            <div class="form-group col-md-4 mb-2">
-                <label for="ims-group-filter">Group</label>
-                <select class="form-control" id="ims-group-filter" name="group" onchange="document.getElementById('ims-item-filter').value = ''; this.form.submit();">
-                    <option value="">All groups</option>
-                    <?php foreach ($grouped as $groupName => $groupItems): ?>
-                        <option value="<?= e($groupName) ?>" <?= $groupFilter === $groupName ? 'selected' : '' ?>><?= e($groupName) ?> (<?= count($groupItems) ?>)</option>
-                    <?php endforeach; ?>
-                </select>
+            <?php if ($stockFilter !== ''): ?>
+                <input type="hidden" name="stock" value="<?= e($stockFilter) ?>">
+            <?php endif; ?>
+            <div class="form-row align-items-end">
+                <div class="form-group col-md-3 mb-2">
+                    <label for="ims-group-filter">Group</label>
+                    <select class="form-control" id="ims-group-filter" name="group" onchange="document.getElementById('ims-item-filter').value = ''; this.form.submit();">
+                        <option value="">All groups</option>
+                        <?php foreach ($grouped as $groupName => $groupItems): ?>
+                            <option value="<?= e($groupName) ?>" <?= $groupFilter === $groupName ? 'selected' : '' ?>><?= e($groupName) ?> (<?= count($groupItems) ?>)</option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="form-group col-md-4 mb-2">
+                    <label for="ims-item-filter">Item &amp; Specifications</label>
+                    <select class="form-control" id="ims-item-filter" name="item" onchange="this.form.submit()">
+                        <option value="">All items<?= $groupFilter !== '' ? ' in this group' : '' ?></option>
+                        <?php foreach ($itemDropdownGroups as $groupName => $groupItems): ?>
+                            <optgroup label="<?= e($groupName) ?>">
+                                <?php foreach ($groupItems as $groupItem): ?>
+                                    <option value="<?= (int) $groupItem['id'] ?>" <?= $itemFilter === (int) $groupItem['id'] ? 'selected' : '' ?>><?= e($groupItem['stock_no']) ?> — <?= e($groupItem['description']) ?> (<?= e($groupItem['unit']) ?>)</option>
+                                <?php endforeach; ?>
+                            </optgroup>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="form-group col-md-3 mb-2">
+                    <label for="ims-date-mode">Date filter</label>
+                    <select class="form-control" id="ims-date-mode" name="date_mode">
+                        <option value="">All dates</option>
+                        <option value="as_of" <?= $dateMode === 'as_of' ? 'selected' : '' ?>>As of date</option>
+                        <option value="range" <?= $dateMode === 'range' ? 'selected' : '' ?>>Date range</option>
+                    </select>
+                </div>
+                <div class="form-group col-md-2 mb-2">
+                    <button class="btn btn-outline-primary btn-block" type="submit"><i class="fas fa-search"></i> Filter</button>
+                </div>
             </div>
-            <div class="form-group col-md-6 mb-2">
-                <label for="ims-item-filter">Item &amp; Specifications</label>
-                <select class="form-control" id="ims-item-filter" name="item" onchange="this.form.submit()">
-                    <option value="">All items<?= $groupFilter !== '' ? ' in this group' : '' ?></option>
-                    <?php foreach ($itemDropdownGroups as $groupName => $groupItems): ?>
-                        <optgroup label="<?= e($groupName) ?>">
-                            <?php foreach ($groupItems as $groupItem): ?>
-                                <option value="<?= (int) $groupItem['id'] ?>" <?= $itemFilter === (int) $groupItem['id'] ? 'selected' : '' ?>><?= e($groupItem['stock_no']) ?> — <?= e($groupItem['description']) ?> (<?= e($groupItem['unit']) ?>)</option>
-                            <?php endforeach; ?>
-                        </optgroup>
-                    <?php endforeach; ?>
-                </select>
+            <div class="form-row align-items-end" id="ims-date-fields" style="<?= $dateMode === '' ? 'display:none;' : '' ?>">
+                <div class="form-group col-md-3 mb-2 ims-date-asof" style="<?= $dateMode === 'as_of' ? '' : 'display:none;' ?>">
+                    <label for="ims-as-of">As of date</label>
+                    <input class="form-control" type="date" id="ims-as-of" name="as_of" value="<?= e($asOfDate) ?>">
+                </div>
+                <div class="form-group col-md-3 mb-2 ims-date-range" style="<?= $dateMode === 'range' ? '' : 'display:none;' ?>">
+                    <label for="ims-from-date">From date</label>
+                    <input class="form-control" type="date" id="ims-from-date" name="from_date" value="<?= e($fromDate) ?>">
+                </div>
+                <div class="form-group col-md-3 mb-2 ims-date-range" style="<?= $dateMode === 'range' ? '' : 'display:none;' ?>">
+                    <label for="ims-to-date">To date</label>
+                    <input class="form-control" type="date" id="ims-to-date" name="to_date" value="<?= e($toDate) ?>">
+                </div>
             </div>
-            <div class="form-group col-md-2 mb-2">
-                <button class="btn btn-outline-primary btn-block" type="submit"><i class="fas fa-search"></i> Filter</button>
-            </div>
-            <?php if ($groupFilter !== '' || $itemFilter > 0): ?>
-                <div class="form-group col-12 mb-2">
+            <?php if ($groupFilter !== '' || $itemFilter > 0 || $dateMode !== '' || $stockFilter !== ''): ?>
+                <div class="mb-2">
                     <a class="btn btn-sm btn-outline-secondary" href="<?= customUri('ims', 'Stock and Inventory') ?>"><i class="fas fa-times"></i> Clear filter</a>
-                    <span class="text-muted ml-2">Showing <?= count($items) ?> of <?= count($allItems) ?> item(s).</span>
+                    <span class="text-muted ml-2">
+                        Showing <?= count($items) ?> of <?= count($allItems) ?> item(s)
+                        <?php if ($stockFilter === 'available'): ?> · with available stock<?php elseif ($stockFilter === 'out'): ?> · out of stock<?php endif; ?>
+                        <?php if ($dateMode === 'as_of'): ?> · as of <?= e($asOfLabel) ?><?php elseif ($dateMode === 'range'): ?> · transactions <?= e($rangeLabel) ?><?php endif; ?>
+                    </span>
                 </div>
             <?php endif; ?>
         </form>
         <div class="table-responsive">
             <table class="table table-hover" id="ims-items-table">
-                <thead><tr><th>Stock No.</th><th>Description</th><th>Group</th><th>Unit</th><th>Total Units</th><th>On Hand</th><th>Minimum</th><th>Status</th><th>Remarks</th><th>Action</th></tr></thead>
+                <thead><tr><th>Stock No.</th><th>Description</th><th>Group</th><th>Unit</th><th>Total Units</th><th>On Hand</th><?php if ($dateMode === 'as_of'): ?><th>On Hand as of <?= e($asOfLabel) ?></th><?php elseif ($dateMode === 'range'): ?><th>Qty moved (<?= e($rangeLabel) ?>)</th><?php endif; ?><th>Minimum</th><th>Status</th><th>Remarks</th><th>Action</th></tr></thead>
                 <tbody>
                 <?php if (!$items): ?>
-                    <tr><td colspan="10" class="text-center text-muted my-3">No items match the selected filter.</td></tr>
+                    <tr><td colspan="<?= $dateMode !== '' ? 11 : 10 ?>" class="text-center text-muted my-3">No items match the selected filter.</td></tr>
                 <?php endif; ?>
                 <?php foreach ($items as $item): ?>
-                    <?php $low = (int) $item['quantity'] <= (int) $item['min_qty']; ?>
+                    <?php $dateRow = $dateInfo[(int) $item['id']] ?? ['as_of_qty' => (int) $item['quantity'], 'range_qty' => 0, 'range_count' => 0]; ?>
+                    <?php $statusQty = $dateMode === 'as_of' ? (int) $dateRow['as_of_qty'] : (int) $item['quantity']; ?>
+                    <?php $noStock = $statusQty <= 0; ?>
+                    <?php $low = !$noStock && $statusQty <= (int) $item['min_qty']; ?>
                     <tr>
                         <?php $unitsUnit = !empty($item['number_units_unit']) ? $item['number_units_unit'] : $item['unit']; ?>
                         <td><?= e($item['stock_no']) ?></td>
@@ -89,11 +227,19 @@ imsNav('inventory');
                         <td><?= e($item['unit']) ?></td>
                         <td><?php $tu = (int) $item['total_units']; ?><?= $tu ? $tu . (!empty($unitsUnit) ? ' ' . e(ucfirst($unitsUnit)) : '') : '—' ?></td>
                         <td><?= (int) $item['quantity'] ?></td>
+                        <?php if ($dateMode === 'as_of'): ?>
+                            <td><?= (int) $dateRow['as_of_qty'] ?></td>
+                        <?php elseif ($dateMode === 'range'): ?>
+                            <td>
+                                <?= ((int) $dateRow['range_qty'] > 0 ? '+' : '') . (int) $dateRow['range_qty'] ?>
+                                <small class="text-muted">(<?= (int) $dateRow['range_count'] ?> txn)</small>
+                            </td>
+                        <?php endif; ?>
                         <td><?= (int) $item['min_qty'] ?></td>
-                        <td><span class="badge badge-<?= $low ? 'warning' : 'success' ?>"><?= $low ? 'Low stock' : 'Available' ?></span></td>
+                        <td><span class="badge badge-<?= $noStock ? 'danger' : ($low ? 'warning' : 'success') ?>"><?= $noStock ? 'No Stock' : ($low ? 'Low Stock' : 'Available') ?></span></td>
                         <td><small><?= e($item['remarks'] ?: '—') ?></small></td>
                         <td>
-                            <a class="btn btn-info btn-sm" href="<?= customUri('ims', 'Create RIS', $item['id']) ?>"><i class="fas fa-file-invoice"></i> RIS</a>
+                            <button type="button" class="btn btn-info btn-sm ris-quick-btn" data-toggle="modal" data-target="#risModal" data-item-id="<?= (int) $item['id'] ?>"><i class="fas fa-file-invoice"></i> RIS</button>
                             <a class="btn btn-warning btn-sm" href="<?= customUri('ims', 'Edit Stock Item', $item['id']) ?>"><i class="fas fa-edit"></i> Edit</a>
                         </td>
                     </tr>
@@ -105,3 +251,47 @@ imsNav('inventory');
 </div>
 
 <?php require_once(__DIR__ . '/item-create.php'); ?>
+<?php require_once(__DIR__ . '/ris-create.php'); ?>
+<script>
+document.addEventListener('click', function (e) {
+    var btn = e.target.closest('.ris-quick-btn');
+    if (!btn) return;
+    if (typeof ITEMS === 'undefined' || typeof selectItem !== 'function') return;
+    var itemId = btn.getAttribute('data-item-id');
+    var item = ITEMS.filter(function (it) { return String(it.id) === String(itemId); })[0];
+    if (!item) return;
+    if (typeof resetRisForm === 'function') resetRisForm();
+    var container = document.getElementById('ris-items');
+    if (!container) return;
+    var row = container.querySelector('.ris-item-row');
+    if (!row) return;
+    selectItem(row, item);
+    var qty = row.querySelector('[name="quantity[]"]');
+    if (qty) { qty.value = 1; refreshStock(row); }
+});
+</script>
+<script>
+(function () {
+    var mode = document.getElementById('ims-date-mode');
+    var fields = document.getElementById('ims-date-fields');
+    if (!mode || !fields) return;
+    var asOfGroups = document.querySelectorAll('.ims-date-asof');
+    var rangeGroups = document.querySelectorAll('.ims-date-range');
+    function toggleGroup(groups, show) {
+        groups.forEach(function (group) {
+            group.style.display = show ? '' : 'none';
+            group.querySelectorAll('input, select').forEach(function (input) {
+                input.disabled = !show;
+            });
+        });
+    }
+    function update() {
+        var value = mode.value;
+        fields.style.display = value ? '' : 'none';
+        toggleGroup(asOfGroups, value === 'as_of');
+        toggleGroup(rangeGroups, value === 'range');
+    }
+    mode.addEventListener('change', update);
+    update();
+})();
+</script>

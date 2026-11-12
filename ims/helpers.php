@@ -152,19 +152,27 @@ function risDivisionOfficeFromEmployee(int $employeeId): array
     }
     $stationId = (string) $station['station_id'];
 
-    $division = '';
+    // Section stations: division comes from the section's functional division.
     $section = find('SELECT id, name, functional_division_id FROM sections WHERE id = ?', [$stationId]);
     if ($section) {
+        $division = '';
         if (!empty($section['functional_division_id'])) {
             $div = find('SELECT name FROM functional_divisions WHERE id = ?', [$section['functional_division_id']]);
             $division = $div ? (string) $div['name'] : '';
         }
-        $office = (string) $section['name'];
-    } else {
-        $office = stationName($stationId);
+        return ['division' => $division, 'office' => (string) $section['name']];
     }
 
-    return ['division' => $division, 'office' => $office];
+    // School stations: division is always the Schools Division Office.
+    $school = find('SELECT id, name FROM schools WHERE alias = ? LIMIT 1', [$stationId]);
+    if (!$school) {
+        $school = find('SELECT id, name FROM schools WHERE id = ? LIMIT 1', [$stationId]);
+    }
+    if ($school) {
+        return ['division' => 'Dipolog City Schools Division Office', 'office' => (string) $school['name']];
+    }
+
+    return ['division' => '', 'office' => stationName($stationId)];
 }
 
 function poNumberToWords(float $amount): string

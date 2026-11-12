@@ -3,7 +3,11 @@
 require_once('../includes/function.php');
 require_once('helpers.php');
 
-if (!imsCanAccessAll()) {
+// Signed-in users without full IMS access land on Purchase Requests. Only the
+// bare dashboard URL is redirected: redirecting every request would loop, since
+// this same check runs again when the target view is requested. Logged-out
+// visitors fall through so the shell can send them to the login page.
+if (!empty($GLOBALS['userId']) && !imsCanAccessAll() && !isset($_GET['v'])) {
     header('Location: ' . customUri('ims', 'Purchase Requests'));
     exit;
 }
