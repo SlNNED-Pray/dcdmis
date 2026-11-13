@@ -239,6 +239,9 @@ imsNav('inventory');
                         <td><span class="badge badge-<?= $noStock ? 'danger' : ($low ? 'warning' : 'success') ?>"><?= $noStock ? 'No Stock' : ($low ? 'Low Stock' : 'Available') ?></span></td>
                         <td><small><?= e($item['remarks'] ?: '—') ?></small></td>
                         <td>
+                            <?php if ($statusQty <= (int) $item['min_qty']): ?>
+                                <button type="button" class="btn btn-danger btn-sm pr-quick-btn" title="Create purchase request" data-toggle="modal" data-target="#prModal" data-item-id="<?= (int) $item['id'] ?>" data-item-qty="<?= max(1, (int) $item['min_qty'] - $statusQty) ?>" data-item-cost="<?= number_format((float) $item['unit_cost'], 2, '.', '') ?>"><i class="fas fa-file-invoice-dollar"></i> PR</button>
+                            <?php endif; ?>
                             <button type="button" class="btn btn-info btn-sm ris-quick-btn" data-toggle="modal" data-target="#risModal" data-item-id="<?= (int) $item['id'] ?>"><i class="fas fa-file-invoice"></i> RIS</button>
                             <a class="btn btn-warning btn-sm" href="<?= customUri('ims', 'Edit Stock Item', $item['id']) ?>"><i class="fas fa-edit"></i> Edit</a>
                         </td>
@@ -252,6 +255,7 @@ imsNav('inventory');
 
 <?php require_once(__DIR__ . '/item-create.php'); ?>
 <?php require_once(__DIR__ . '/ris-create.php'); ?>
+<?php require_once(__DIR__ . '/pr-create.php'); ?>
 <script>
 document.addEventListener('click', function (e) {
     var btn = e.target.closest('.ris-quick-btn');
@@ -268,6 +272,20 @@ document.addEventListener('click', function (e) {
     selectItem(row, item);
     var qty = row.querySelector('[name="quantity[]"]');
     if (qty) { qty.value = 1; refreshStock(row); }
+});
+</script>
+<script>
+document.addEventListener('click', function (e) {
+    var btn = e.target.closest('.pr-quick-btn');
+    if (!btn) return;
+    var form = document.querySelector('#prModal form');
+    if (!form) return;
+    var itemSelect = form.querySelector('[name="item_id"]');
+    var qtyInput = form.querySelector('[name="quantity"]');
+    var costInput = form.querySelector('[name="unit_cost"]');
+    if (itemSelect) { itemSelect.value = btn.getAttribute('data-item-id') || ''; }
+    if (qtyInput) { qtyInput.value = btn.getAttribute('data-item-qty') || '1'; }
+    if (costInput) { costInput.value = btn.getAttribute('data-item-cost') || '0'; }
 });
 </script>
 <script>
