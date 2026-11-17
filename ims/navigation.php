@@ -32,6 +32,7 @@ function imsNav(string $active): void
         'ris-disapproved' => ['Disapproved RIS', 'fa-file-invoice'],
         'iar-report' => ['Inspection and Acceptance Report', 'fa-clipboard-check'],
         'pr' => ['Purchase Requests', 'fa-file-invoice-dollar'],
+        'rcppe' => ['RCPPE', 'fa-building'],
         'stock-card' => ['Stock Card', 'fa-clipboard-list'],
         'rsmi' => ['Report of Supplies and Materials Issued', 'fa-file-alt'],
         'ics' => ['Inventory Custodian Slip', 'fa-clipboard-list'],
@@ -45,13 +46,13 @@ function imsNav(string $active): void
     echo '<ul class="nav nav-tabs mb-4">';
     if (!imsCanAccessAll()) {
         $class = $active === 'pr' ? ' active' : '';
-        echo '<li class="nav-item"><a class="nav-link' . $class . '" href="' . customUri('ims', 'Purchase Requests') . '"><i class="fas fa-file-invoice-dollar"></i> Purchase Requests</a></li>';
+        echo '<li class="nav-item"><a class="nav-link' . $class . '" href="' . imsUri('Purchase Requests') . '"><i class="fas fa-file-invoice-dollar"></i> Purchase Requests</a></li>';
         echo '</ul>';
         return;
     }
     foreach ($links as $key => [$label, $icon]) {
         $class = $key === $active ? ' active' : '';
-        echo '<li class="nav-item"><a class="nav-link' . $class . '" href="' . customUri('ims', $label) . '">';
+        echo '<li class="nav-item"><a class="nav-link' . $class . '" href="' . imsUri($label) . '">';
         echo '<i class="fas ' . $icon . '"></i> ' . e($label) . '</a></li>';
     }
     echo '</ul>';

@@ -3,6 +3,7 @@
 require_once('app.php');
 
 $url = isset($_GET['v']) ? sanitize(decode($_GET['v'])) : null;
+$isEmbedded = isset($_GET['embed']) && (string) $_GET['embed'] === '1';
 $page = isset($url) && !empty($url) ? "{$url} | {$appTitle}" : $appTitle;
 $isPis = $activeApp === 'pis';
 $isDts = $activeApp === 'dts';
@@ -23,14 +24,11 @@ require_once(root() . '/includes/layout/components.php');
     <?php require_once(root() . '/includes/layout/header.php') ?>
     <link rel="stylesheet" href="<?= uri() ?>/assets/vendor/datatables/dataTables.bootstrap4.min.css">
     <link rel="stylesheet" href="<?= uri() ?>/assets/vendor/datatables-responsive/css/responsive.bootstrap4.min.css">
-    <script>
-        <?php $uri = (!empty($_SERVER['HTTPS']) && ('on' == $_SERVER['HTTPS']) ? 'https://' : 'http://') . $_SERVER['HTTP_HOST']; ?>
-        var SITE_URL = <?= json_encode($uri) ?>;
-    </script>
 </head>
 
-<body id="page-top">
+<body id="page-top"<?= $isEmbedded ? ' class="pimis-embedded"' : '' ?>>
     <div id="wrapper">
+        <?php if (!$isEmbedded): ?>
         <ul class="navbar-nav bg-gradient-primary sidebar sidebar-dark accordion" id="accordionSidebar">
             <div class="sidebar-brand d-flex align-items-center justify-content-center">
                 <a href="<?= uri() ?>" title="<?= title() ?>">
@@ -47,27 +45,34 @@ require_once(root() . '/includes/layout/components.php');
             sidebarToggle();
             ?>
         </ul>
+        <?php endif; ?>
 
         <div id="content-wrapper" class="d-flex flex-column">
             <div id="content">
-                <?php require_once(root() . '/includes/layout/header-menu.php') ?>
+                <?php if (!$isEmbedded) {
+                    require_once(root() . '/includes/layout/header-menu.php');
+                } ?>
 
                 <div class="container-fluid my-4">
                     <?php require_once(root() . '/includes/layout/content.php') ?>
                 </div>
             </div>
 
-            <?php require_once(root() . '/includes/layout/footer.php') ?>
+            <?php if (!$isEmbedded) {
+                require_once(root() . '/includes/layout/footer.php');
+            } ?>
         </div>
     </div>
 
     <?php
-    scrollToTop();
+    if (!$isEmbedded) {
+        scrollToTop();
+    }
     modal();
 
     $currentArea = ($url === 'Monitoring Tools') ? 'monitoring_tools' : $activeApp;
     $currentArea = ($url === 'System Overview') ? 'system_overview' : $currentArea;
-    $needsAgreement = empty($_SESSION["{$prefix}data_privacy_agreed_{$currentArea}"]) && PRODUCTION_MODE;
+    $needsAgreement = !$isEmbedded && empty($_SESSION["{$prefix}data_privacy_agreed_{$currentArea}"]) && PRODUCTION_MODE;
     ?>
 
     <?php if ($needsAgreement): ?>
@@ -197,6 +202,93 @@ require_once(root() . '/includes/layout/components.php');
                     });
                 }
             });
+        </script>
+    <?php endif; ?>
+
+    <?php if (!$isEmbedded && $activeApp === 'pis'): ?>
+        <script>
+            (function () {
+                var sidebar = document.getElementById('accordionSidebar');
+                if (!sidebar) {
+                    return;
+                }
+
+                var pimisLink = null;
+                Array.prototype.forEach.call(sidebar.querySelectorAll('a.nav-link'), function (link) {
+                    var href = link.getAttribute('href') || '';
+                    if (!pimisLink && /\/ims\/?$/.test(href)) {
+                        pimisLink = link;
+                    }
+                });
+                if (!pimisLink) {
+                    return;
+                }
+
+                pimisLink.addEventListener('click', function (event) {
+                    event.preventDefault();
+
+                    var container = document.querySelector('#content > .container-fluid');
+                    if (!container) {
+                        window.location.href = pimisLink.href;
+                        return;
+                    }
+
+                    var href = pimisLink.getAttribute('href') || pimisLink.href;
+                    var separator = href.indexOf('?') === -1 ? '?' : '&';
+
+                    container.innerHTML = '';
+                    var wrap = document.createElement('div');
+                    wrap.id = 'pimisEmbedWrap';
+                    wrap.style.cssText = 'position:relative;height:calc(100vh - 7rem);min-height:540px;';
+                    var frame = document.createElement('iframe');
+                    frame.src = href + separator + 'embed=1';
+                    frame.title = 'PIMIS';
+                    frame.style.cssText = 'width:100%;height:100%;border:0;background:#f8f9fc;'
+                        + 'border-radius:.35rem;box-shadow:0 .15rem 1.75rem 0 rgba(58,59,69,.15);';
+                    wrap.appendChild(frame);
+                    container.appendChild(wrap);
+
+                    Array.prototype.forEach.call(sidebar.querySelectorAll('.nav-item.active'), function (item) {
+                        item.classList.remove('active');
+                    });
+                    var item = pimisLink.closest('.nav-item');
+                    if (item) {
+                        item.classList.add('active');
+                    }
+
+                    var pimisTitle = 'Property & Inventory Management Information System';
+                    var bannerTitle = document.querySelector('.banner h2');
+                    if (bannerTitle) {
+                        bannerTitle.textContent = pimisTitle.toUpperCase();
+                    }
+                    var titleParts = document.title.split('|');
+                    var titleRest = titleParts.slice(1).join('|').trim();
+                    document.title = titleRest ? pimisTitle + ' | ' + titleRest : pimisTitle;
+
+                    window.scrollTo(0, 0);
+                });
+            })();
+        </script>
+    <?php endif; ?>
+
+    <?php if ($isEmbedded): ?>
+        <script>
+            (function () {
+                document.addEventListener('submit', function (event) {
+                    var form = event.target;
+                    if (!form || String(form.method || '').toLowerCase() !== 'get') {
+                        return;
+                    }
+                    if (form.querySelector('input[name="embed"]')) {
+                        return;
+                    }
+                    var input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'embed';
+                    input.value = '1';
+                    form.appendChild(input);
+                });
+            })();
         </script>
     <?php endif; ?>
 </body>

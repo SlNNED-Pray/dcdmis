@@ -8,7 +8,7 @@ if (!$itemRecord) {
     messageAlert(true, 'Stock item not found.', false);
     contentTitle('Edit Stock Item');
     imsNav('inventory');
-    echo '<div class="card shadow mb-4"><div class="card-body"><a class="btn btn-secondary" href="' . customUri('ims', 'Stock and Inventory') . '">Back</a></div></div>';
+    echo '<div class="card shadow mb-4"><div class="card-body"><a class="btn btn-secondary" href="' . imsUri('Stock and Inventory') . '">Back</a></div></div>';
     return;
 }
 $itemUnits = query('SELECT * FROM item_units WHERE item_id = ? ORDER BY FIELD(unit, "bottle","gallon","piece","unit","pack","can","pouch","bundle","roll","tube","pad","box","ream","book","cart","license","ticket","lot","set"), unit', [$itemId]);
@@ -103,7 +103,7 @@ messageAlert($showAlert ?? false, $message ?? '', $success ?? true);
             </div>
             <div class="form-group"><label>Remarks</label><textarea class="form-control" name="remarks" rows="2"><?= e($item['remarks']) ?></textarea></div>
             <button class="btn btn-primary" type="submit" name="save-item"><i class="fas fa-save"></i> Update item</button>
-            <a class="btn btn-secondary" href="<?= customUri('ims', 'Stock and Inventory') ?>">Cancel</a>
+            <a class="btn btn-secondary" href="<?= imsUri('Stock and Inventory') ?>">Cancel</a>
         </form>
     </div>
 </div>

@@ -58,7 +58,7 @@ $filteredTotalAmount = array_sum(array_column($rows, 'amount'));
 $filteredTotalQty = array_sum(array_column($rows, 'quantity'));
 ?>
 <div class="d-flex justify-content-between align-items-center mb-3 rsmi-toolbar">
-	<form method="get" class="form-inline">
+	<form method="get" class="form-inline"><?= imsEmbedInput() ?>
 		<input type="hidden" name="v" value="<?= e(cipher('Report of Supplies and Materials Issued')) ?>">
 		<label class="mr-2" for="rsmi-filter">Search</label>
 		<input class="form-control mr-2" id="rsmi-filter" name="filter" list="rsmi-filter-options" value="<?= e($rsmiFilter) ?>" placeholder="RIS no., center code, stock no., or item" autocomplete="off">
@@ -66,7 +66,7 @@ $filteredTotalQty = array_sum(array_column($rows, 'quantity'));
 			<?php foreach ($filterOptions as $option): ?><option value="<?= e($option) ?>"></option><?php endforeach; ?>
 		</datalist>
 		<button class="btn btn-primary" type="submit"><i class="fas fa-filter"></i> Filter</button>
-		<a class="btn btn-outline-secondary ml-2" href="<?= customUri('ims', 'Report of Supplies and Materials Issued') ?>">Clear</a>
+		<a class="btn btn-outline-secondary ml-2" href="<?= imsUri('Report of Supplies and Materials Issued') ?>">Clear</a>
 	</form>
 	<button class="btn btn-secondary" type="button" onclick="window.open('<?= uri() . '/ims/rsmi-print.php' ?>', '_blank', 'resizable=1,scrollbars=1')"><i class="fas fa-print"></i> Print</button>
 </div>

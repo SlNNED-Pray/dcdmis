@@ -72,7 +72,7 @@ $icsCount = count($rows);
 $sumAmount = array_sum(array_map(static fn (array $row): float => $row['amount'], $rows));
 ?>
 <div class="d-flex justify-content-between align-items-center mb-3 stock-card-toolbar">
-	<form method="get" class="form-inline">
+	<form method="get" class="form-inline"><?= imsEmbedInput() ?>
 		<input type="hidden" name="v" value="<?= e(cipher('Inventory Custodian Slip')) ?>">
 		<label class="mr-2" for="ics-filter">Search</label>
 		<input class="form-control mr-2" id="ics-filter" name="filter" value="<?= e($stockCardFilter) ?>" list="ics-filter-options" placeholder="Personnel, office, stock no., or item" autocomplete="off">
@@ -80,7 +80,7 @@ $sumAmount = array_sum(array_map(static fn (array $row): float => $row['amount']
 			<?php foreach ($filterOptions as $option): ?><option value="<?= e($option) ?>"></option><?php endforeach; ?>
 		</datalist>
 		<button class="btn btn-primary" type="submit"><i class="fas fa-filter"></i> Filter</button>
-		<a class="btn btn-outline-secondary ml-2" href="<?= customUri('ims', 'Inventory Custodian Slip') ?>">Clear</a>
+		<a class="btn btn-outline-secondary ml-2" href="<?= imsUri('Inventory Custodian Slip') ?>">Clear</a>
 	</form>
 	<button class="btn btn-secondary" type="button" onclick="window.open('<?= uri() . '/ims/ics-report-print.php?filter=' . urlencode($stockCardFilter) ?>', '_blank', 'resizable=1,scrollbars=1')"><i class="fas fa-print"></i> Print ICS</button>
 </div>

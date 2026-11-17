@@ -1,6 +1,6 @@
 <?php
 $activeApp = $_SESSION["{$prefix}activeApp"] = 'ims';
-$page = $appTitle = 'Inventory Management System';
+$page = $appTitle = 'Property & Inventory Management Information System';
 require_once(root() . '/ims/helpers.php');
 
 if (!isset($userId)) {
@@ -20,7 +20,7 @@ if (isset($_SESSION["{$prefix}change_password"])) {
 }
 
 if (isset($_POST['primary-search-button'])) {
-    redirect(customUri('ims', 'Stock and Inventory', sanitize($_POST['primary-search-text'])));
+    redirect(imsUri('Stock and Inventory', sanitize($_POST['primary-search-text'])));
 }
 
 if (isset($_POST['update-identification'])) {
@@ -1307,7 +1307,7 @@ if (isset($_POST['save-supplier'])) {
 
     createSystemLog($stationId, $userId, 'Added supplier ' . $name, $result, clientIp());
     $_SESSION["{$prefix}stock_flash"] = ['success' => true, 'message' => "Supplier {$name} added successfully."];
-    redirect(customUri('ims', 'Supplier'));
+    redirect(imsUri('Supplier'));
 }
 
 if (isset($_POST['delete-supplier'])) {
@@ -1332,7 +1332,7 @@ if (isset($_POST['delete-supplier'])) {
     if ($result !== false) {
         createSystemLog($stationId, $userId, 'Deleted supplier ' . $supplier['name'], $deleteId, clientIp());
         $_SESSION["{$prefix}stock_flash"] = ['success' => true, 'message' => 'Supplier deleted successfully.'];
-        redirect(customUri('ims', 'Supplier'));
+        redirect(imsUri('Supplier'));
     } else {
         $message = 'Failed to delete supplier. Please try again.';
     }
@@ -1393,7 +1393,7 @@ if (isset($_POST['save-pr'])) {
 
     createSystemLog($stationId, $userId, 'Created purchase request', $result, clientIp());
     $_SESSION["{$prefix}ims_flash"] = ['success' => true, 'message' => "Purchase request {$prNo} created successfully."];
-    redirect(customUri('ims', 'Purchase Requests'));
+    redirect(imsUri('Purchase Requests'));
 }
 
 if (isset($_POST['add-item-unit'])) {
@@ -1414,7 +1414,7 @@ if (isset($_POST['add-item-unit'])) {
     if ($result !== false) {
         createSystemLog($stationId, $userId, 'Added unit ' . ucfirst($unit) . ' (' . $pcs . ' pcs/unit) for stock item #' . $itemId, $itemId, clientIp());
         $_SESSION["{$prefix}stock_flash"] = ['success' => true, 'message' => 'Unit added.'];
-        redirect(customUri('ims', 'Edit Stock Item', $itemId));
+        redirect(imsUri('Edit Stock Item', $itemId));
     } else {
         $message = 'Failed to add the unit. Please try again.';
     }
@@ -1432,7 +1432,7 @@ if (isset($_POST['remove-item-unit'])) {
     if ($result !== false) {
         createSystemLog($stationId, $userId, 'Removed unit ' . ucfirst($unitRow['unit']) . ' from stock item #' . $unitRow['item_id'], (int) $unitRow['item_id'], clientIp());
         $_SESSION["{$prefix}stock_flash"] = ['success' => true, 'message' => 'Unit removed.'];
-        redirect(customUri('ims', 'Edit Stock Item', (int) $unitRow['item_id']));
+        redirect(imsUri('Edit Stock Item', (int) $unitRow['item_id']));
     } else {
         $message = 'Failed to remove the unit. Please try again.';
     }
@@ -1526,7 +1526,7 @@ if (isset($_POST['save-item'])) {
             }
             imsRecordCostHistory($editId, $unitCost, (float) ($existingItem['unit_cost'] ?? 0), 'Manual Edit', null, null, (int) $userId);
             $_SESSION["{$prefix}stock_flash"] = ['success' => true, 'message' => 'Item updated successfully.'];
-            redirect(customUri('ims', 'Stock and Inventory'));
+            redirect(imsUri('Stock and Inventory'));
         } else {
             $message = 'Failed to update item. Please try again.';
         }
@@ -1548,7 +1548,7 @@ if (isset($_POST['save-item'])) {
             }
             createSystemLog($stationId, $userId, 'Added stock item', $result, clientIp());
             $_SESSION["{$prefix}stock_flash"] = ['success' => true, 'message' => 'Item added successfully.'];
-            redirect(customUri('ims', 'Stock and Inventory'));
+            redirect(imsUri('Stock and Inventory'));
         } else {
             $message = 'Failed to add item. Please try again.';
         }
@@ -1576,7 +1576,7 @@ if (isset($_POST['delete-item'])) {
     if ($result !== false) {
         createSystemLog($stationId, $userId, 'Deleted stock item', $deleteId, clientIp());
         $_SESSION["{$prefix}stock_flash"] = ['success' => true, 'message' => 'Item deleted successfully.'];
-        redirect(customUri('ims', 'Stock and Inventory'));
+        redirect(imsUri('Stock and Inventory'));
     } else {
         $message = 'Failed to delete item. Please try again.';
     }
@@ -1656,7 +1656,7 @@ if (isset($_POST['save-ris'])) {
         commit();
         createSystemLog($stationId, $userId, 'Created requisition slip', $result, clientIp());
         $_SESSION["{$prefix}stock_flash"] = ['success' => true, 'message' => 'Requisition slip ' . $risNo . ' created successfully.'];
-        redirect(customUri('ims', 'Requisition Slips'));
+        redirect(imsUri('Requisition Slips'));
     } else {
         rollBack();
         $message = 'Failed to create requisition slip. Please try again.';
@@ -1683,7 +1683,7 @@ if (isset($_POST['generate-po'])) {
 
     createSystemLog($stationId, $userId, 'Generated purchase order ' . $poNo . ' for PR ' . $pr['pr_no'], $prId, clientIp());
     $_SESSION["{$prefix}stock_flash"] = ['success' => true, 'message' => 'Purchase order ' . $poNo . ' generated successfully.'];
-    redirect(customUri('ims', 'Purchase Order'));
+    redirect(imsUri('Purchase Order'));
 }
 
 // ========== Inspection and Acceptance Report ==========
@@ -1783,7 +1783,7 @@ if (isset($_POST['save-iar'])) {
 
         createSystemLog($stationId, $userId, 'Created IAR and issued stock', $risId, clientIp());
         $_SESSION["{$prefix}stock_flash"] = ['success' => true, 'message' => 'IAR ' . implode(', ', $createdNos) . ' created. Stock issued successfully.'];
-        redirect(customUri('ims', 'Requisition Slips'));
+        redirect(imsUri('Requisition Slips'));
 
     } catch (Exception $e) {
         rollBack();
@@ -1815,7 +1815,7 @@ if (isset($_POST['disapprove-ris-item'])) {
     if ($updateResult !== false) {
         createSystemLog($stationId, $userId, 'Disapproved RIS item', (int) $detail['ris_id'], clientIp());
         $_SESSION["{$prefix}stock_flash"] = ['success' => true, 'message' => 'Item disapproved.'];
-        redirect(customUri('ims', 'Requisition Slips'));
+        redirect(imsUri('Requisition Slips'));
     } else {
         $message = 'Failed to disapprove item.';
     }
@@ -1901,7 +1901,7 @@ if (isset($_POST['issue-ris-item'])) {
             clientIp()
         );
         $_SESSION["{$prefix}stock_flash"] = ['success' => true, 'message' => 'Item issued. Stock reduced to ' . $newQty . ' pieces (' . $newUnits . ' ' . (empty($item['unit']) ? 'units' : $item['unit']) . ').'];
-        redirect(customUri('ims', 'Requisition Slips'));
+        redirect(imsUri('Requisition Slips'));
     } else {
         rollBack();
         $message = 'Failed to issue the item.';
@@ -1957,7 +1957,7 @@ if (isset($_POST['approve-mooe-ris-item'])) {
         commit();
         createSystemLog($stationId, $userId, 'Approved RIS item via MOOE, created PR ' . $prNo, (int) $detail['ris_id'], clientIp());
         $_SESSION["{$prefix}stock_flash"] = ['success' => true, 'message' => 'Item approved via MOOE. Purchase request ' . $prNo . ' created.'];
-        redirect(customUri('ims', 'Purchase Requests'));
+        redirect(imsUri('Purchase Requests'));
     } else {
         rollBack();
         $message = 'Failed to approve item via MOOE and create purchase request.';
@@ -2021,7 +2021,7 @@ if (isset($_POST['save-physical-count'])) {
 
     $success = true;
     $_SESSION["{$prefix}stock_flash"] = ['success' => true, 'message' => 'Physical count adjustments saved for ' . $updated . ' item(s).'];
-    redirect(customUri('ims', 'Physical Count'));
+    redirect(imsUri('Physical Count'));
 }
 
 // Add Recalibration Entry (Phases 2 & 3)

@@ -54,7 +54,7 @@ imsNav('iar');
 	<div class="form-group col-md-6"><label>Invoice No.</label><input class="form-control" name="invoice_no"></div>
 </div>
 <button class="btn btn-primary" type="submit" name="save-iar"><i class="fas fa-check"></i> Accept and issue</button>
-<a class="btn btn-secondary" href="<?= customUri('ims', 'IAR') ?>">Cancel</a>
+<a class="btn btn-secondary" href="<?= imsUri('IAR') ?>">Cancel</a>
 </form>
 </div></div>
 <script>

@@ -42,10 +42,10 @@ messageAlert($showAlert ?? false, $message ?? '', $success ?? true);
         <?php if ($totalChanges): ?><span class="badge badge-info ml-1"><?= $totalChanges ?> change(s)</span><?php endif; ?>
     </div>
     <div class="card-body">
-        <form method="get" class="form-row mb-3">
+        <form method="get" class="form-row mb-3"><?= imsEmbedInput() ?>
             <input type="hidden" name="type" value="<?= e($_GET['type'] ?? '') ?>">
             <div class="form-group col-md-5 mb-0"><input class="form-control" type="search" name="filter" placeholder="Search by stock no. or description" value="<?= e($filter) ?>"></div>
-            <div class="form-group col-md-4 mb-0"><button class="btn btn-outline-primary" type="submit"><i class="fas fa-search"></i> Filter</button><?php if ($filter !== ''): ?> <a class="btn btn-outline-secondary" href="<?= customUri('ims', 'Price History') ?>">Clear</a><?php endif; ?></div>
+            <div class="form-group col-md-4 mb-0"><button class="btn btn-outline-primary" type="submit"><i class="fas fa-search"></i> Filter</button><?php if ($filter !== ''): ?> <a class="btn btn-outline-secondary" href="<?= imsUri('Price History') ?>">Clear</a><?php endif; ?></div>
         </form>
         <div class="table-responsive"><table class="table table-hover table-sm"><thead><tr><th>Date</th><th>Stock No.</th><th>Description</th><th>Previous Cost</th><th>New Cost</th><th>Change</th><th>Current Cost</th><th>Reference</th><th>Recorded By</th></tr></thead><tbody>
         <?php foreach ($rows as $row): ?>

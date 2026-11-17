@@ -15,14 +15,42 @@ uksort($grouped, 'strnatcasecmp');
 
 $groupFilter = trim((string) ($_GET['group'] ?? ''));
 $itemFilter = (int) ($_GET['item'] ?? 0);
+$itemQuery = trim((string) ($_GET['item_q'] ?? ''));
 $stockFilter = trim((string) ($_GET['stock'] ?? ''));
 if (!in_array($stockFilter, ['available', 'out'], true)) {
     $stockFilter = '';
 }
 
+$itemLabel = static function (array $row): string {
+    $label = trim((string) ($row['stock_no'] ?? ''));
+    $description = trim((string) ($row['description'] ?? ''));
+    if ($description !== '') {
+        $label .= ($label !== '' ? ' — ' : '') . $description;
+    }
+    if (trim((string) ($row['unit'] ?? '')) !== '') {
+        $label .= ' (' . trim((string) $row['unit']) . ')';
+    }
+    return $label;
+};
+
+$itemTokens = $itemQuery !== ''
+    ? array_values(array_filter(preg_split('/\s+/', mb_strtolower($itemQuery)) ?: [], static fn (string $token): bool => $token !== ''))
+    : [];
+
 $items = $allItems;
 if ($itemFilter > 0) {
     $items = array_values(array_filter($allItems, static fn (array $row): bool => (int) $row['id'] === $itemFilter));
+} elseif ($itemTokens) {
+    $itemSource = $groupFilter !== '' && isset($grouped[$groupFilter]) ? $grouped[$groupFilter] : $allItems;
+    $items = array_values(array_filter($itemSource, static function (array $row) use ($itemTokens): bool {
+        $haystack = mb_strtolower(trim((string) ($row['stock_no'] ?? '')) . ' ' . trim((string) ($row['description'] ?? '')));
+        foreach ($itemTokens as $token) {
+            if (mb_strpos($haystack, $token) === false) {
+                return false;
+            }
+        }
+        return true;
+    }));
 } elseif ($groupFilter !== '' && isset($grouped[$groupFilter])) {
     $items = $grouped[$groupFilter];
 }
@@ -35,6 +63,31 @@ if ($stockFilter === 'available') {
 $itemDropdownGroups = ($itemFilter === 0 && $groupFilter !== '' && isset($grouped[$groupFilter]))
     ? [$groupFilter => $grouped[$groupFilter]]
     : $grouped;
+
+$itemOptions = [];
+foreach ($itemDropdownGroups as $groupItems) {
+    foreach ($groupItems as $groupItem) {
+        $itemOptions[] = $groupItem;
+    }
+}
+
+$itemLookup = [];
+foreach ($itemOptions as $optionItem) {
+    $itemLookup[$itemLabel($optionItem)] = (int) $optionItem['id'];
+}
+
+$selectedItemLabel = '';
+if ($itemFilter > 0) {
+    foreach ($itemOptions as $optionItem) {
+        if ((int) $optionItem['id'] === $itemFilter) {
+            $selectedItemLabel = $itemLabel($optionItem);
+            break;
+        }
+    }
+}
+if ($selectedItemLabel === '' && $itemQuery !== '') {
+    $selectedItemLabel = $itemQuery;
+}
 
 $dateMode = trim((string) ($_GET['date_mode'] ?? ''));
 if (!in_array($dateMode, ['as_of', 'range'], true)) {
@@ -142,7 +195,7 @@ imsNav('inventory');
         <button type="button" class="btn btn-primary btn-sm" data-toggle="modal" data-target="#itemModal"><i class="fas fa-plus"></i> Add item</button>
     </div>
     <div class="card-body">
-        <form method="get" class="mb-3">
+        <form method="get" class="mb-3"><?= imsEmbedInput() ?>
             <input type="hidden" name="v" value="<?= e(cipher('Stock and Inventory')) ?>">
             <?php if ($stockFilter !== ''): ?>
                 <input type="hidden" name="stock" value="<?= e($stockFilter) ?>">
@@ -150,7 +203,7 @@ imsNav('inventory');
             <div class="form-row align-items-end">
                 <div class="form-group col-md-3 mb-2">
                     <label for="ims-group-filter">Group</label>
-                    <select class="form-control" id="ims-group-filter" name="group" onchange="document.getElementById('ims-item-filter').value = ''; this.form.submit();">
+                    <select class="form-control" id="ims-group-filter" name="group" onchange="document.getElementById('ims-item-filter').value = ''; document.getElementById('ims-item-id').value = ''; this.form.submit();">
                         <option value="">All groups</option>
                         <?php foreach ($grouped as $groupName => $groupItems): ?>
                             <option value="<?= e($groupName) ?>" <?= $groupFilter === $groupName ? 'selected' : '' ?>><?= e($groupName) ?> (<?= count($groupItems) ?>)</option>
@@ -159,16 +212,14 @@ imsNav('inventory');
                 </div>
                 <div class="form-group col-md-4 mb-2">
                     <label for="ims-item-filter">Item &amp; Specifications</label>
-                    <select class="form-control" id="ims-item-filter" name="item" onchange="this.form.submit()">
-                        <option value="">All items<?= $groupFilter !== '' ? ' in this group' : '' ?></option>
-                        <?php foreach ($itemDropdownGroups as $groupName => $groupItems): ?>
-                            <optgroup label="<?= e($groupName) ?>">
-                                <?php foreach ($groupItems as $groupItem): ?>
-                                    <option value="<?= (int) $groupItem['id'] ?>" <?= $itemFilter === (int) $groupItem['id'] ? 'selected' : '' ?>><?= e($groupItem['stock_no']) ?> — <?= e($groupItem['description']) ?> (<?= e($groupItem['unit']) ?>)</option>
-                                <?php endforeach; ?>
-                            </optgroup>
+                    <input class="form-control" id="ims-item-filter" name="item_q" list="ims-item-options"
+                        value="<?= e($selectedItemLabel) ?>" placeholder="Type stock no. or description" autocomplete="off">
+                    <datalist id="ims-item-options">
+                        <?php foreach ($itemOptions as $optionItem): ?>
+                            <option value="<?= e($itemLabel($optionItem)) ?>"></option>
                         <?php endforeach; ?>
-                    </select>
+                    </datalist>
+                    <input type="hidden" name="item" id="ims-item-id" value="<?= $itemFilter > 0 ? (int) $itemFilter : '' ?>">
                 </div>
                 <div class="form-group col-md-3 mb-2">
                     <label for="ims-date-mode">Date filter</label>
@@ -196,9 +247,9 @@ imsNav('inventory');
                     <input class="form-control" type="date" id="ims-to-date" name="to_date" value="<?= e($toDate) ?>">
                 </div>
             </div>
-            <?php if ($groupFilter !== '' || $itemFilter > 0 || $dateMode !== '' || $stockFilter !== ''): ?>
+            <?php if ($groupFilter !== '' || $itemFilter > 0 || $itemQuery !== '' || $dateMode !== '' || $stockFilter !== ''): ?>
                 <div class="mb-2">
-                    <a class="btn btn-sm btn-outline-secondary" href="<?= customUri('ims', 'Stock and Inventory') ?>"><i class="fas fa-times"></i> Clear filter</a>
+                    <a class="btn btn-sm btn-outline-secondary" href="<?= imsUri('Stock and Inventory') ?>"><i class="fas fa-times"></i> Clear filter</a>
                     <span class="text-muted ml-2">
                         Showing <?= count($items) ?> of <?= count($allItems) ?> item(s)
                         <?php if ($stockFilter === 'available'): ?> · with available stock<?php elseif ($stockFilter === 'out'): ?> · out of stock<?php endif; ?>
@@ -243,7 +294,7 @@ imsNav('inventory');
                                 <button type="button" class="btn btn-danger btn-sm pr-quick-btn" title="Create purchase request" data-toggle="modal" data-target="#prModal" data-item-id="<?= (int) $item['id'] ?>" data-item-qty="<?= max(1, (int) $item['min_qty'] - $statusQty) ?>" data-item-cost="<?= number_format((float) $item['unit_cost'], 2, '.', '') ?>"><i class="fas fa-file-invoice-dollar"></i> PR</button>
                             <?php endif; ?>
                             <button type="button" class="btn btn-info btn-sm ris-quick-btn" data-toggle="modal" data-target="#risModal" data-item-id="<?= (int) $item['id'] ?>"><i class="fas fa-file-invoice"></i> RIS</button>
-                            <a class="btn btn-warning btn-sm" href="<?= customUri('ims', 'Edit Stock Item', $item['id']) ?>"><i class="fas fa-edit"></i> Edit</a>
+                            <a class="btn btn-warning btn-sm" href="<?= imsUri('Edit Stock Item', $item['id']) ?>"><i class="fas fa-edit"></i> Edit</a>
                         </td>
                     </tr>
                 <?php endforeach; ?>
@@ -311,5 +362,29 @@ document.addEventListener('click', function (e) {
     }
     mode.addEventListener('change', update);
     update();
+})();
+</script>
+<script>
+(function () {
+    var input = document.getElementById('ims-item-filter');
+    var hidden = document.getElementById('ims-item-id');
+    var form = input ? input.form : null;
+    if (!input || !hidden || !form) return;
+    var lookup = <?= json_encode($itemLookup, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?: '{}' ?>;
+
+    function syncId() {
+        hidden.value = Object.prototype.hasOwnProperty.call(lookup, input.value)
+            ? String(lookup[input.value])
+            : '';
+    }
+
+    input.addEventListener('input', syncId);
+    input.addEventListener('change', function () {
+        syncId();
+        if (hidden.value !== '') {
+            form.submit();
+        }
+    });
+    syncId();
 })();
 </script>

@@ -8,7 +8,7 @@ require_once('helpers.php');
 // this same check runs again when the target view is requested. Logged-out
 // visitors fall through so the shell can send them to the login page.
 if (!empty($GLOBALS['userId']) && !imsCanAccessAll() && !isset($_GET['v'])) {
-    header('Location: ' . customUri('ims', 'Purchase Requests'));
+    header('Location: ' . imsUri('Purchase Requests'));
     exit;
 }
 require_once(root() . '/includes/string.php');

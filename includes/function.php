@@ -54,7 +54,41 @@ function uri($domain = null)
 {
     $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https://' : 'http://';
     $root = $domain !== null ? $domain : $_SERVER['HTTP_HOST'];
-    return "{$protocol}{$root}";
+    if ($domain !== null) {
+        return "{$protocol}{$root}";
+    }
+
+    return "{$protocol}{$root}" . basePath();
+}
+
+/**
+ * Path of the application relative to the document root.
+ *
+ * Empty when the app is served from its own virtual host (production and the
+ * usual http://depeddipolog.test setup), and "/depeddipolog.test" when the
+ * app is reached through the htdocs folder (for example
+ * http://localhost/depeddipolog.test/).
+ */
+function basePath()
+{
+    static $base = null;
+    if ($base !== null) {
+        return $base;
+    }
+
+    $base = '';
+    $documentRoot = realpath((string) ($_SERVER['DOCUMENT_ROOT'] ?? ''));
+    $applicationRoot = realpath(dirname(__DIR__));
+    if ($documentRoot !== false && $applicationRoot !== false) {
+        $documentRoot = rtrim(str_replace('\\', '/', $documentRoot), '/');
+        $applicationRoot = str_replace('\\', '/', $applicationRoot);
+        if ($documentRoot !== '' && $applicationRoot !== $documentRoot
+            && strpos($applicationRoot . '/', $documentRoot . '/') === 0) {
+            $base = substr($applicationRoot, strlen($documentRoot));
+        }
+    }
+
+    return $base;
 }
 
 function customUri($page, $view, $id = null, $domain = null)

@@ -140,7 +140,7 @@ $displayPhoto = file_exists(root() . '/' . $user['profile_picture']) ? uri() . '
                 if (userRole($userId, 'ims')) {
                     require_once(root() . '/ims/helpers.php');
                     if (imsCanAccessAll()) {
-                        linkDropdownItem(uri() . '/ims', 'Inventory Management', 'fa-box', 'Inventory Management System');
+                        linkDropdownItem(uri() . '/ims', 'Property & Inventory Management', 'fa-box', 'Property & Inventory Management Information System');
                     }
                 }
 

@@ -223,10 +223,10 @@ function contentTitleWithModal($title, $link, $text, $icon, $color = 'primary')
     </div>
 <?php }
 
-function sidebarMenuItem($link, $title, $icon, $condition = false, $counter = null, $newFeature = false)
+function sidebarMenuItem($link, $title, $icon, $condition = false, $counter = null, $newFeature = false, $target = null)
 { ?>
     <li class="nav-item <?= $condition ? ' active' : '' ?>">
-        <a class="nav-link d-flex align-items-center justify-content-between" href="<?= e($link) ?>">
+        <a class="nav-link d-flex align-items-center justify-content-between" href="<?= e($link) ?>"<?= $target !== null ? ' target="' . e($target) . '"' : '' ?>>
             <div class="menu-item">
                 <i class="fas fa-fw <?= e($icon) ?>"></i>
                 <span>

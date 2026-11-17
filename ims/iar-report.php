@@ -45,7 +45,7 @@ if ($poNumbers) {
 }
 ?>
 <div class="d-flex justify-content-between align-items-center mb-3 stock-card-toolbar">
-	<form method="get" class="form-inline">
+	<form method="get" class="form-inline"><?= imsEmbedInput() ?>
 		<input type="hidden" name="v" value="<?= e(cipher('Inspection and Acceptance Report')) ?>">
 		<label class="mr-2" for="iar-filter">Search</label>
 		<input class="form-control mr-2" id="iar-filter" name="filter" value="<?= e($filter) ?>" list="iar-filter-options" placeholder="PO no., supplier, or item" autocomplete="off">
@@ -53,7 +53,7 @@ if ($poNumbers) {
 			<?php foreach ($filterOptions as $option): ?><option value="<?= e($option) ?>"></option><?php endforeach; ?>
 		</datalist>
 		<button class="btn btn-primary" type="submit"><i class="fas fa-filter"></i> Filter</button>
-		<a class="btn btn-outline-secondary ml-2" href="<?= customUri('ims', 'Inspection and Acceptance Report') ?>">Clear</a>
+		<a class="btn btn-outline-secondary ml-2" href="<?= imsUri('Inspection and Acceptance Report') ?>">Clear</a>
 	</form>
 </div>
 

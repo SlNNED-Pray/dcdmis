@@ -48,7 +48,7 @@ $filterOptions = array_values(array_unique(array_filter(array_map(
 $parCount = count($rows);
 ?>
 <div class="d-flex justify-content-between align-items-center mb-3 stock-card-toolbar">
-	<form method="get" class="form-inline">
+	<form method="get" class="form-inline"><?= imsEmbedInput() ?>
 		<input type="hidden" name="v" value="<?= e(cipher('Property Acknowledgement Receipt')) ?>">
 		<label class="mr-2" for="par-filter">Search</label>
 		<input class="form-control mr-2" id="par-filter" name="filter" value="<?= e($parFilter) ?>" list="par-filter-options" placeholder="Stock no. or item" autocomplete="off">
@@ -56,7 +56,7 @@ $parCount = count($rows);
 			<?php foreach ($filterOptions as $option): ?><option value="<?= e($option) ?>"></option><?php endforeach; ?>
 		</datalist>
 		<button class="btn btn-primary" type="submit"><i class="fas fa-filter"></i> Filter</button>
-		<a class="btn btn-outline-secondary ml-2" href="<?= customUri('ims', 'Property Acknowledgement Receipt') ?>">Clear</a>
+		<a class="btn btn-outline-secondary ml-2" href="<?= imsUri('Property Acknowledgement Receipt') ?>">Clear</a>
 	</form>
 	<button class="btn btn-secondary" type="button" onclick="window.open('<?= uri() . '/ims/par-print.php?filter=' . urlencode($parFilter) ?>', '_blank', 'resizable=1,scrollbars=1')"><i class="fas fa-print"></i> Print PAR</button>
 </div>

@@ -19,7 +19,7 @@ $id = (int) ($_POST['id'] ?? 0);
 $status = trim((string) ($_POST['status'] ?? ''));
 $filter = trim((string) ($_POST['filter'] ?? ''));
 
-$back = customUri('ims', 'Inspection and Acceptance Report');
+$back = imsUri('Inspection and Acceptance Report');
 if ($filter !== '') {
     $back .= (strpos($back, '?') === false ? '?' : '&') . 'filter=' . urlencode($filter);
 }

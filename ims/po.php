@@ -24,7 +24,7 @@ contentTitle('Purchase Order');
 imsNav('pr');
 ?>
 <div class="po-toolbar no-print">
-    <form method="get" class="po-select-form">
+    <form method="get" class="po-select-form"><?= imsEmbedInput() ?>
         <input type="hidden" name="v" value="<?= e(cipher('Purchase Order')) ?>">
         <label for="po-pr">Purchase Request</label>
         <select id="po-pr" name="pr_id" required onchange="this.form.submit()">

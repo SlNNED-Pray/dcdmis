@@ -131,7 +131,7 @@ if ($employee) {
                         <div class="form-check">
                             <input class="form-check-input" id="ims" type="checkbox" name="ims"
                                 <?= setActiveItem($imsUser, true, 'checked') ?>>
-                            <label class="form-check-label" for="ims">Inventory Management System</label>
+                            <label class="form-check-label" for="ims">Property &amp; Inventory Management Information System</label>
                         </div>
                     </div>
 

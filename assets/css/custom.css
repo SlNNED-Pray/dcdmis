@@ -1,6 +1,13 @@
 /* assets/css/custom.css */
 .background-cover {
-    background: url('../../uploads/division/division_office_background.png') no-repeat center center fixed;
+    background-color: #eef3f9;
+    background-image:
+        radial-gradient(circle at 15% 20%, rgba(78, 115, 223, 0.12) 0, rgba(78, 115, 223, 0) 45%),
+        radial-gradient(circle at 85% 0%, rgba(28, 200, 138, 0.10) 0, rgba(28, 200, 138, 0) 40%),
+        linear-gradient(135deg, #f8fafc 0%, #e8eef7 55%, #f4f7fb 100%);
+    background-attachment: fixed;
+    background-position: center center;
+    background-repeat: no-repeat;
     background-size: cover;
 }
 

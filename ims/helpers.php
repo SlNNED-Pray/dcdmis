@@ -1,6 +1,35 @@
 <?php
 require_once(__DIR__ . '/../includes/database/account.php');
 
+/**
+ * Whether the current request is rendering the IMS inside another app's
+ * layout (PIMIS opened from the PIS sidebar without leaving the page).
+ */
+function imsEmbedded(): bool
+{
+    return isset($_GET['embed']) && (string) $_GET['embed'] === '1';
+}
+
+/**
+ * Build a link to an IMS view, preserving embedded mode when it is active.
+ */
+function imsUri(string $view, $id = null): string
+{
+    $link = customUri('ims', $view, $id);
+    if (imsEmbedded()) {
+        $link .= '&embed=1';
+    }
+    return $link;
+}
+
+/**
+ * Hidden field that keeps filter forms inside the embedded frame.
+ */
+function imsEmbedInput(): string
+{
+    return imsEmbedded() ? '<input type="hidden" name="embed" value="1">' : '';
+}
+
 function imsCanAccessAll(): bool
 {
     $userId = $GLOBALS['userId'] ?? null;

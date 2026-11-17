@@ -114,6 +114,9 @@ if (!isset($url) || $url === 'dashboard') {
         case 'Purchase Requests':
             $file = root() . '/ims/pr.php';
             break;
+        case 'RCPPE':
+            $file = root() . '/ims/rcppe.php';
+            break;
         case 'Create Purchase Request':
             $file = root() . '/ims/pr-create.php';
             break;

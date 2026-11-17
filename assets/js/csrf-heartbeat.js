@@ -11,7 +11,7 @@
 
     async function fetchCsrfToken() {
         try {
-            const baseUrl = (typeof uri === 'function') ? uri() : '';
+            const baseUrl = (typeof SITE_URL !== 'undefined' && SITE_URL) ? SITE_URL : '';
             const response = await fetch(baseUrl + '/api/csrf-token.php', { cache: 'no-store' });
             if (response.ok) {
                 const data = await response.json();

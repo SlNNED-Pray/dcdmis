@@ -49,7 +49,7 @@ $rows = array_values(array_filter($rows, static function (array $row) use ($stoc
 
 ?>
 <div class="d-flex justify-content-between align-items-center mb-3 stock-card-toolbar">
-	<form method="get" class="form-inline">
+	<form method="get" class="form-inline"><?= imsEmbedInput() ?>
 		<input type="hidden" name="v" value="<?= e(cipher('Stock Card')) ?>">
 		<label class="mr-2" for="stock-card-filter">Search</label>
 		<input class="form-control mr-2" id="stock-card-filter" name="filter" list="stock-card-filter-options" value="<?= e($stockCardFilter) ?>" placeholder="Name, office, stock no., or item" autocomplete="off">
@@ -57,7 +57,7 @@ $rows = array_values(array_filter($rows, static function (array $row) use ($stoc
 			<?php foreach ($filterOptions as $option): ?><option value="<?= e($option) ?>"></option><?php endforeach; ?>
 		</datalist>
 		<button class="btn btn-primary" type="submit"><i class="fas fa-filter"></i> Filter</button>
-		<a class="btn btn-outline-secondary ml-2" href="<?= customUri('ims', 'Stock Card') ?>">Clear</a>
+		<a class="btn btn-outline-secondary ml-2" href="<?= imsUri('Stock Card') ?>">Clear</a>
 	</form>
 	<button class="btn btn-secondary" type="button" onclick="window.open('<?= uri() . '/ims/stock-card-print.php?filter=' . urlencode($stockCardFilter) ?>', '_blank', 'resizable=1,scrollbars=1')"><i class="fas fa-print"></i> Print</button>
 </div>
