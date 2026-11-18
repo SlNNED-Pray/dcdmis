@@ -7,6 +7,7 @@
  */
 require_once __DIR__ . '/includes/dtcsc-optional.php';
 require_once __DIR__ . '/includes/job-order-tables.php';
+require_once __DIR__ . '/includes/vehicle-units.php';
 require_once __DIR__ . '/../includes/database/database.php';
 require_once __DIR__ . '/../includes/database/account.php';
 require_once __DIR__ . '/includes/bsa-access.php';
@@ -35,6 +36,21 @@ if (!in_array($viewType, ['facility', 'vehicle', 'local', 'joborder'], true)) {
     $viewType = 'facility';
 }
 $listUrl = uri() . '/bsa/?v=' . encode('Booking Approvals');
+$editBaseUrl = uri() . '/bsa/?v=' . encode('Booking Edit');
+
+/**
+ * Quick Reject button for the Pending rows of the Booking Schedules table.
+ * Opens the shared "Reason for Rejection" modal.
+ */
+function bsaQuickRejectForm(string $actionUrl, string $idField, int $id, string $action): string
+{
+    return '<button type="button" class="btn btn-sm btn-outline-danger bsa-reject-open"'
+        . ' data-url="' . htmlspecialchars($actionUrl) . '"'
+        . ' data-id-field="' . htmlspecialchars($idField) . '"'
+        . ' data-id="' . $id . '"'
+        . ' data-action="' . htmlspecialchars($action) . '"'
+        . ' title="Reject this request"><i class="fa fa-times mr-1"></i>Rejected</button>';
+}
 
 function badgeClass($status) {
     switch ($status) {
@@ -393,6 +409,13 @@ if ($viewId && $viewType === 'joborder') {
 
 contentTitle('Booking Approvals');
 ?>
+<?php if (!empty($_SESSION['bsa_edit_flash'])): ?>
+    <?php $editFlash = $_SESSION['bsa_edit_flash']; unset($_SESSION['bsa_edit_flash']); ?>
+    <div class="alert alert-<?php echo $editFlash['type'] === 'success' ? 'success' : 'danger'; ?> alert-dismissible fade show" role="alert">
+        <?php echo htmlspecialchars($editFlash['message']); ?>
+        <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+    </div>
+<?php endif; ?>
 
 <style>
     .dtc-print-sheet {
@@ -602,7 +625,7 @@ foreach (['dtcsc_flash', 'vehicle_flash', 'joborder_flash'] as $flashKey) {
             </tr>
             <tr>
                 <th>Destination</th><td><?php echo htmlspecialchars($vehicle['destination']); ?></td>
-                <th>Vehicle Type</th><td><?php echo htmlspecialchars($vehicle['vehicle_type']); ?></td>
+                <th>Vehicle Type</th><td><?php echo htmlspecialchars(bsaVehicleUnitLabel($vehicle['vehicle_type'], $vehicle['vehicle_subtype'] ?? null)); ?></td>
             </tr>
             <tr>
                 <th>Departure</th><td><?php echo formatDate($vehicle['depart_date']) . ' at ' . formatTime($vehicle['depart_time']); ?></td>
@@ -686,7 +709,7 @@ foreach (['dtcsc_flash', 'vehicle_flash', 'joborder_flash'] as $flashKey) {
                 <div class="card-header py-3"><h6 class="m-0 font-weight-bold text-primary"><i class="fa fa-car mr-1"></i>Vehicle</h6></div>
                 <div class="card-body">
                     <p class="mb-2"><strong>Vehicle Type:</strong>
-                        <span class="badge <?php echo vehicleBadgeClass($vehicle['status']); ?>"><?php echo htmlspecialchars($vehicle['vehicle_type']); ?></span>
+                        <span class="badge <?php echo vehicleBadgeClass($vehicle['status']); ?>"><?php echo htmlspecialchars(bsaVehicleUnitLabel($vehicle['vehicle_type'], $vehicle['vehicle_subtype'] ?? null)); ?></span>
                     </p>
                     <p class="mb-0"><strong>Special Request:</strong> <?php echo nl2br(htmlspecialchars($vehicle['special_request'] ?: 'None')); ?></p>
                 </div>
@@ -1336,7 +1359,7 @@ foreach (['dtcsc_flash', 'vehicle_flash', 'joborder_flash'] as $flashKey) {
                                         <td><?php echo htmlspecialchars($row['purpose_of_travel']); ?></td>
                                         <td><?php echo htmlspecialchars($row['requesting_office']); ?></td>
                                         <td>
-                                            <?php echo htmlspecialchars($row['vehicle_type']); ?><br>
+                                            <?php echo htmlspecialchars(bsaVehicleUnitLabel($row['vehicle_type'], $row['vehicle_subtype'] ?? null)); ?><br>
                                             <span class="text-muted small"><i class="fa fa-arrow-right"></i> <?php echo htmlspecialchars($row['destination']); ?></span>
                                         </td>
                                         <td class="small">
@@ -1347,6 +1370,10 @@ foreach (['dtcsc_flash', 'vehicle_flash', 'joborder_flash'] as $flashKey) {
                                         <td class="text-muted small">&mdash;</td>
                                         <td class="text-right">
                                             <a href="<?php echo $listUrl; ?>&id=<?php echo (int)$row['id']; ?>&type=vehicle" class="btn btn-sm btn-outline-primary">View</a>
+                                            <a href="<?php echo $editBaseUrl; ?>&id=<?php echo (int)$row['id']; ?>&type=vehicle" class="btn btn-sm btn-outline-warning"><i class="fa fa-edit mr-1"></i>Edit</a>
+                                            <?php if ($row['status'] === 'pending'): ?>
+                                                <?php echo bsaQuickRejectForm(uri() . '/bsa/vehicle-approvals-process.php', 'vehicle_id', (int) $row['id'], 'not_available'); ?>
+                                            <?php endif; ?>
                                             <?php if ($row['status'] === 'available'): ?>
                                                 <a href="<?php echo $listUrl; ?>&id=<?php echo (int)$row['id']; ?>&type=vehicle&print=1" target="_blank" class="btn btn-sm btn-outline-secondary"><i class="fa fa-print mr-1"></i>Print</a>
                                             <?php endif; ?>
@@ -1370,6 +1397,10 @@ foreach (['dtcsc_flash', 'vehicle_flash', 'joborder_flash'] as $flashKey) {
                                         <td class="text-muted small">&mdash;</td>
                                         <td class="text-right">
                                             <a href="<?php echo $listUrl; ?>&id=<?php echo (int)$row['id']; ?>&type=local" class="btn btn-sm btn-outline-primary">View</a>
+                                            <a href="<?php echo $editBaseUrl; ?>&id=<?php echo (int)$row['id']; ?>&type=local" class="btn btn-sm btn-outline-warning"><i class="fa fa-edit mr-1"></i>Edit</a>
+                                            <?php if ($row['status'] === 'pending'): ?>
+                                                <?php echo bsaQuickRejectForm(uri() . '/bsa/booking-approvals-process.php', 'booking_id', (int) $row['id'], 'reject'); ?>
+                                            <?php endif; ?>
                                             <?php if ($row['status'] === 'approved'): ?>
                                                 <a href="<?php echo $listUrl; ?>&id=<?php echo (int)$row['id']; ?>&type=local&print=1" target="_blank" class="btn btn-sm btn-outline-secondary"><i class="fa fa-print mr-1"></i>Print</a>
                                             <?php endif; ?>
@@ -1400,6 +1431,10 @@ foreach (['dtcsc_flash', 'vehicle_flash', 'joborder_flash'] as $flashKey) {
                                         </td>
                                         <td class="text-right">
                                             <a href="<?php echo $listUrl; ?>&id=<?php echo (int)$row['id']; ?>&type=joborder" class="btn btn-sm btn-outline-primary">View</a>
+                                            <a href="<?php echo $editBaseUrl; ?>&id=<?php echo (int)$row['id']; ?>&type=joborder" class="btn btn-sm btn-outline-warning"><i class="fa fa-edit mr-1"></i>Edit</a>
+                                            <?php if ($row['status'] === 'pending'): ?>
+                                                <?php echo bsaQuickRejectForm(uri() . '/bsa/job-order-approvals-process.php', 'job_order_id', (int) $row['id'], 'reject'); ?>
+                                            <?php endif; ?>
                                             <?php if ($row['status'] === 'approved'): ?>
                                                 <button type="button" class="btn btn-sm btn-primary js-track-open"<?php echo jobOrderTrackData($row); ?> title="<?php echo htmlspecialchars(jobOrderTrackingRemarksLabel($row['tracking_remarks'] ?: 'work_in_progress')); ?>"><i class="fa fa-clipboard-check mr-1"></i>Track</button>
                                                 <a href="<?php echo $listUrl; ?>&id=<?php echo (int)$row['id']; ?>&type=joborder&print=1" target="_blank" class="btn btn-sm btn-outline-secondary"><i class="fa fa-print mr-1"></i>Print</a>
@@ -1424,6 +1459,10 @@ foreach (['dtcsc_flash', 'vehicle_flash', 'joborder_flash'] as $flashKey) {
                                         <td class="text-muted small">&mdash;</td>
                                         <td class="text-right">
                                             <a href="<?php echo $listUrl; ?>&id=<?php echo (int)$row['booking_id']; ?>" class="btn btn-sm btn-outline-primary">View</a>
+                                            <a href="<?php echo $editBaseUrl; ?>&id=<?php echo (int)$row['booking_id']; ?>&type=facility" class="btn btn-sm btn-outline-warning"><i class="fa fa-edit mr-1"></i>Edit</a>
+                                            <?php if ($row['status'] === 'pending'): ?>
+                                                <?php echo bsaQuickRejectForm(uri() . '/bsa/dtc-booking-approvals-process.php', 'booking_id', (int) $row['booking_id'], 'reject'); ?>
+                                            <?php endif; ?>
                                             <?php if ($row['status'] === 'approved'): ?>
                                                 <a href="<?php echo $listUrl; ?>&id=<?php echo (int)$row['booking_id']; ?>&print=1" target="_blank" class="btn btn-sm btn-outline-secondary"><i class="fa fa-print mr-1"></i>Print</a>
                                             <?php endif; ?>
@@ -1453,6 +1492,83 @@ foreach (['dtcsc_flash', 'vehicle_flash', 'joborder_flash'] as $flashKey) {
 <?php endif; ?>
 
 <?php if (!$printMode): ?>
+<!-- Rejection reason (shared modal for Pending rows) -->
+<div class="modal fade" id="bsaRejectModal" tabindex="-1" role="dialog" aria-labelledby="bsaRejectModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header py-2">
+                <h6 class="modal-title font-weight-bold text-danger mb-0" id="bsaRejectModalLabel">
+                    <i class="fa fa-times-circle mr-1"></i>Reason for Rejected
+                </h6>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+            </div>
+            <form id="bsaRejectForm" method="POST">
+                <input type="hidden" name="csrf_token" value="<?php echo generateCsrfToken(); ?>">
+                <input type="hidden" id="bsaRejectRecordId" name="booking_id" value="">
+                <input type="hidden" id="bsaRejectAction" name="action" value="">
+                <div class="modal-body py-3">
+                    <p class="text-muted small mb-2">Please state the reason for rejecting this request. It will be saved with the booking.</p>
+                    <div class="form-group mb-0">
+                        <label for="bsaRejectRemarks">Reason <span class="text-danger">*</span></label>
+                        <textarea class="form-control" id="bsaRejectRemarks" name="remarks" rows="4" required placeholder="e.g. Schedule conflict with another activity."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer py-2">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-danger"><i class="fa fa-times-circle mr-1"></i>Reject Request</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    // This view is rendered before jQuery/Bootstrap are loaded by the shell,
+    // so wait for them instead of binding the handler immediately.
+    function initRejectModal() {
+        if (window.jQuery === undefined) {
+            setTimeout(initRejectModal, 50);
+            return;
+        }
+        jQuery(function ($) {
+            var $modal = $('#bsaRejectModal');
+            var $form = $('#bsaRejectForm');
+            if (!$modal.length || !$form.length) {
+                return;
+            }
+
+            var $recordId = $('#bsaRejectRecordId');
+            var $action = $('#bsaRejectAction');
+            var $remarks = $('#bsaRejectRemarks');
+
+            $(document).on('click', '.bsa-reject-open', function (event) {
+                event.preventDefault();
+                var $button = $(this);
+
+                $form.attr('action', $button.attr('data-url'));
+                $recordId.attr('name', $button.attr('data-id-field'));
+                $recordId.val($button.attr('data-id'));
+                $action.val($button.attr('data-action'));
+                $remarks.val('');
+
+                $modal.modal('show');
+            });
+
+            $form.on('submit', function () {
+                $form.find('button[type="submit"]').prop('disabled', true);
+            });
+
+            $modal.on('hidden.bs.modal', function () {
+                $form.find('button[type="submit"]').prop('disabled', false);
+            });
+        });
+    }
+
+    initRejectModal();
+}());
+</script>
+
 <!-- Track (JS modal) form -->
 <div class="modal fade" id="jobOrderTrackModal" tabindex="-1" role="dialog" aria-labelledby="jobOrderTrackModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered" role="document">

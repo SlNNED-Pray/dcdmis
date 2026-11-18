@@ -1,12 +1,14 @@
 <?php
 /**
  * bsa/api/vehicle-availability.php (GET)
- * Returns the Vehicle Types that are already booked (pending/available)
- * for a schedule overlapping the proposed trip, so the form can disable them.
+ * Returns the vehicle units (type + optional sub-option) that are already
+ * booked (pending/available) for a schedule overlapping the proposed trip,
+ * so the form can disable them.
  *
  * Query: depart_date, depart_time, return_date, return_time, [exclude_id]
  */
 require_once(__DIR__ . '/../../includes/function.php');
+require_once(__DIR__ . '/../includes/vehicle-units.php');
 
 header('Content-Type: application/json; charset=utf-8');
 
@@ -39,7 +41,7 @@ $returnTime = substr($returnTime, 0, 5);
 try {
     $db = connection();
 
-    $sql = "SELECT control_no, status, vehicle_type, depart_date, depart_time, return_date, return_time, destination
+    $sql = "SELECT control_no, status, vehicle_type, vehicle_subtype, depart_date, depart_time, return_date, return_time, destination
             FROM vehicle_requests
             WHERE status IN ('pending', 'available')
               AND CONCAT(depart_date, ' ', depart_time) < CONCAT(?, ' ', ?)
@@ -61,11 +63,16 @@ try {
     $vehicles = [];
     foreach ($rows as $row) {
         $type = (string) $row['vehicle_type'];
-        if ($type !== '' && !in_array($type, $conflicts, true)) {
-            $conflicts[] = $type;
+        $subtype = (string) ($row['vehicle_subtype'] ?? '');
+        $key = bsaVehicleUnitKey($type, $subtype);
+        if ($type !== '' && !in_array($key, $conflicts, true)) {
+            $conflicts[] = $key;
         }
         $vehicles[] = [
-            'vehicle_type' => $type,
+            'vehicle_type'     => $type,
+            'vehicle_subtype'  => $subtype,
+            'unit_key'         => $key,
+            'unit_label'       => bsaVehicleUnitLabel($type, $subtype),
             'control_no'   => (string) $row['control_no'],
             'status'       => (string) $row['status'],
             'destination'  => (string) ($row['destination'] ?? ''),

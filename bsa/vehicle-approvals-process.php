@@ -1,6 +1,7 @@
 <?php
 // bsa/vehicle-approvals-process.php — decide a vehicle request (POST)
 require_once(__DIR__ . '/../includes/function.php');
+require_once(__DIR__ . '/includes/vehicle-units.php');
 require_once(__DIR__ . '/../includes/database/database.php');
 require_once(__DIR__ . '/../includes/database/account.php');
 require_once(__DIR__ . '/includes/bsa-access.php');
@@ -32,7 +33,7 @@ if ($id <= 0 || !in_array($action, $validActions, true)) {
 
 $db = connection();
 
-$stmt = $db->prepare("SELECT id, status, vehicle_type, depart_date, depart_time, return_date, return_time FROM vehicle_requests WHERE id = ?");
+$stmt = $db->prepare("SELECT id, status, vehicle_type, vehicle_subtype, depart_date, depart_time, return_date, return_time FROM vehicle_requests WHERE id = ?");
 $stmt->execute([$id]);
 $vehicle = $stmt->fetch();
 
@@ -57,6 +58,7 @@ if ($action === 'available') {
         WHERE status IN ('pending', 'available')
           AND id <> ?
           AND vehicle_type = ?
+          AND COALESCE(vehicle_subtype, '') = ?
           AND CONCAT(depart_date, ' ', depart_time) < CONCAT(?, ' ', ?)
           AND CONCAT(COALESCE(return_date, depart_date), ' ', COALESCE(return_time, '23:59')) > CONCAT(?, ' ', ?)
         ORDER BY depart_date ASC, depart_time ASC
@@ -64,6 +66,7 @@ if ($action === 'available') {
     $conflictStmt->execute([
         $id,
         $vehicle['vehicle_type'],
+        (string) ($vehicle['vehicle_subtype'] ?? ''),
         $endDate, $endTime,
         $vehicle['depart_date'], $vehicle['depart_time'],
     ]);
@@ -75,7 +78,7 @@ if ($action === 'available') {
         }, $overlaps);
         $_SESSION['vehicle_flash'] = [
             'type' => 'danger',
-            'message' => 'Vehicle is not available. Select another Vehicle Type (conflicts with: ' . implode(', ', $refs) . ').'
+            'message' => 'Vehicle is not available. Select another Vehicle Type or Unit (conflicts with: ' . implode(', ', $refs) . ').'
         ];
         header('Location: ' . $listUrl . '&status=pending');
         exit;

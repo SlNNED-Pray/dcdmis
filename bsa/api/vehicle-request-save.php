@@ -1,6 +1,7 @@
 <?php
 // bsa/api/vehicle-request-save.php — create a vehicle request (POST)
 require_once(__DIR__ . '/../../includes/function.php');
+require_once(__DIR__ . '/../includes/vehicle-units.php');
 
 header('Content-Type: application/json; charset=utf-8');
 
@@ -38,6 +39,7 @@ $returnDate          = vehicleInput('return_date', 10);
 $returnTime          = vehicleInput('return_time', 5);
 $noOfPassengers      = (int) ($_POST['no_of_passengers'] ?? 1);
 $vehicleType         = vehicleInput('vehicle_type', 30);
+$vehicleSubtype      = vehicleInput('vehicle_subtype', 30);
 $specialRequest      = vehicleInput('special_request');
 $requestedByName     = vehicleInput('requested_by_name', 255);
 $requestedByPosition = vehicleInput('requested_by_position', 255);
@@ -45,7 +47,13 @@ $concurredByName     = vehicleInput('concurred_by_name', 255);
 $concurredByPosition = vehicleInput('concurred_by_position', 255);
 $divisionChief       = vehicleInput('division_chief', 255);
 
-$vehicleTypes = ['Pickup Truck', 'Utility Van', 'Commuter Van'];
+$vehicleTypes = bsaVehicleTypes();
+$validSubtypes = bsaVehicleSubtypes($vehicleType);
+if ($vehicleSubtype !== '' && !in_array(strtoupper($vehicleSubtype), $validSubtypes, true)) {
+    $vehicleSubtype = '';
+} else {
+    $vehicleSubtype = $vehicleSubtype !== '' ? strtoupper($vehicleSubtype) : '';
+}
 
 $errors = [];
 if ($requestingOffice === '')             $errors[] = 'Requesting Office is required.';
@@ -58,6 +66,8 @@ if ($departDate === '' || !strtotime($departDate))                  $errors[] = 
 if ($departTime === '' || !strtotime($departTime))                  $errors[] = 'A valid Time of Departure is required.';
 if ($noOfPassengers < 1)                  $errors[] = 'Number of Passengers must be at least 1.';
 if (!in_array($vehicleType, $vehicleTypes, true))                   $errors[] = 'Please select a valid Vehicle Type.';
+if ($validSubtypes && $vehicleSubtype === '')                       $errors[] = 'Please select a Pickup Truck Unit (FOTON or STRADA).';
+if (!$validSubtypes && $vehicleSubtype !== '')                      $errors[] = 'Invalid unit for the selected Vehicle Type.';
 if ($requestedByName === '')              $errors[] = 'Requested By (Name) is required.';
 if ($requestedByPosition === '')          $errors[] = 'Requested By (Position) is required.';
 if ($returnDate !== '' && !strtotime($returnDate))                  $errors[] = 'Estimated Date of Return is invalid.';
@@ -69,7 +79,7 @@ if ($errors) {
     exit;
 }
 
-// Prevent double-booking: the same Vehicle Type must be free for the proposed trip.
+// Prevent double-booking: the same vehicle/unit must be free for the proposed trip.
 $conflictEndDate = $returnDate !== '' ? $returnDate : $departDate;
 $conflictEndTime = $returnTime !== '' ? $returnTime : '23:59';
 $conflictStmt = $db->prepare("
@@ -77,18 +87,19 @@ $conflictStmt = $db->prepare("
     FROM vehicle_requests
     WHERE status IN ('pending', 'available')
       AND vehicle_type = ?
+      AND COALESCE(vehicle_subtype, '') = ?
       AND CONCAT(depart_date, ' ', depart_time) < CONCAT(?, ' ', ?)
       AND CONCAT(COALESCE(return_date, depart_date), ' ', COALESCE(return_time, '23:59')) > CONCAT(?, ' ', ?)
     ORDER BY depart_date ASC, depart_time ASC
 ");
-$conflictStmt->execute([$vehicleType, $conflictEndDate, $conflictEndTime, $departDate, $departTime]);
+$conflictStmt->execute([$vehicleType, $vehicleSubtype, $conflictEndDate, $conflictEndTime, $departDate, $departTime]);
 $overlaps = $conflictStmt->fetchAll();
 if ($overlaps) {
     http_response_code(409);
     echo json_encode([
         'success' => false,
         'error'   => 'VEHICLE_CONFLICT',
-        'message' => 'Vehicle is not available. Select another Vehicle Type',
+        'message' => 'Vehicle is not available. Select another Vehicle Type or Unit',
     ]);
     exit;
 }
@@ -115,6 +126,7 @@ try {
         'return_time'           => $returnTime !== '' ? $returnTime : null,
         'no_of_passengers'      => $noOfPassengers,
         'vehicle_type'          => $vehicleType,
+        'vehicle_subtype'       => $vehicleSubtype !== '' ? $vehicleSubtype : null,
         'special_request'       => $specialRequest,
         'requested_by_name'     => $requestedByName,
         'requested_by_position' => $requestedByPosition,

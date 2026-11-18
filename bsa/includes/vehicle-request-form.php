@@ -4,6 +4,7 @@
  * Mirrors the DTC-SC "Book a Facility" form layout and style.
  * Expects: $csrfToken, $prefill.
  */
+require_once __DIR__ . '/vehicle-units.php';
 ?>
 <div class="form-head">
     <h2>Vehicle Request / Booking Form</h2>
@@ -131,7 +132,7 @@
             <div class="mb-4">
                 <label class="form-label">Vehicle Type <span class="text-danger">*</span></label>
                 <div class="vehicle-type-options">
-                    <?php foreach (['Pickup Truck', 'Utility Van', 'Commuter Van'] as $type): ?>
+                    <?php foreach (bsaVehicleTypes() as $type): ?>
                         <div class="form-check">
                             <input class="form-check-input vehicle-type" type="radio" name="vehicle_type" id="vehicle_<?php echo strtolower(str_replace(' ', '_', $type)); ?>" value="<?php echo $type; ?>" required>
                             <label class="form-check-label" for="vehicle_<?php echo strtolower(str_replace(' ', '_', $type)); ?>">
@@ -140,6 +141,20 @@
                         </div>
                     <?php endforeach; ?>
                 </div>
+
+                <div id="pickupUnitOptions" class="mt-3" style="display:none;">
+                    <label class="form-label">Pickup Truck Unit <span class="text-danger">*</span></label>
+                    <div class="vehicle-subtype-options">
+                        <?php foreach (bsaVehicleSubtypes('Pickup Truck') as $unit): ?>
+                            <div class="form-check">
+                                <input class="form-check-input vehicle-subtype" type="radio" name="vehicle_subtype" id="vehicle_unit_<?php echo strtolower($unit); ?>" value="<?php echo $unit; ?>" data-unit-key="<?php echo htmlspecialchars(bsaVehicleUnitKey('Pickup Truck', $unit)); ?>">
+                                <label class="form-check-label" for="vehicle_unit_<?php echo strtolower($unit); ?>"><?php echo $unit; ?></label>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                    <div id="pickupUnitNote" class="small mt-2 text-danger" style="display:none;"></div>
+                </div>
+
                 <div id="vehicleAvailabilityNote" class="small mt-2" style="display:none;"></div>
             </div>
 
@@ -234,7 +249,27 @@
             var currentStep = 1;
             var totalSteps = 5;
             var vehicleAvailabilityUrl = '<?php echo uri(); ?>/bsa/api/vehicle-availability.php';
-            var unavailableVehicleTypes = [];
+            var unavailableVehicleUnits = [];
+            var pickupTypeName = 'Pickup Truck';
+
+            function unitKey(type, subtype) {
+                return (type || '') + '|' + (subtype || '');
+            }
+
+            function isUnitUnavailable(type, subtype) {
+                return unavailableVehicleUnits.indexOf(unitKey(type, subtype)) !== -1;
+            }
+
+            function syncPickupUnits() {
+                var isPickup = $('input[name="vehicle_type"]:checked').val() === pickupTypeName;
+                if (isPickup) {
+                    $('#pickupUnitOptions').show();
+                } else {
+                    $('#pickupUnitOptions').hide();
+                    $('input[name="vehicle_subtype"]').prop('checked', false);
+                    $('#pickupUnitNote').hide().text('');
+                }
+            }
 
             function setVehicleNote(text, isError) {
                 var $note = $('#vehicleAvailabilityNote');
@@ -247,24 +282,45 @@
             }
 
             function applyVehicleAvailability() {
+                var $subtypes = $('input[name="vehicle_subtype"]');
+                var blockedPickupUnits = 0;
+
+                $subtypes.each(function () {
+                    var $input = $(this);
+                    var blocked = unavailableVehicleUnits.indexOf($input.data('unit-key')) !== -1;
+                    $input.prop('disabled', blocked);
+                    if (blocked) {
+                        $input.prop('checked', false);
+                        blockedPickupUnits++;
+                    }
+                });
+
                 $('input[name="vehicle_type"]').each(function () {
                     var $input = $(this);
                     var type = $input.val();
                     var $label = $('label[for="' + $input.attr('id') + '"]');
                     var base = $label.data('base-label') || $.trim($label.text());
                     $label.data('base-label', base);
+                    var blocked = type === pickupTypeName
+                        ? blockedPickupUnits >= $subtypes.length
+                        : isUnitUnavailable(type, '');
 
-                    if (unavailableVehicleTypes.indexOf(type) !== -1) {
-                        $input.prop('disabled', true);
-                        if ($input.prop('checked')) {
-                            $input.prop('checked', false);
-                        }
-                        $label.html(base + ' <span class="text-danger">- unavailable (already booked)</span>');
-                    } else {
-                        $input.prop('disabled', false);
+                    $input.prop('disabled', blocked);
+                    if (blocked && $input.prop('checked')) {
+                        $input.prop('checked', false);
+                    }
+                    $label.html(base + (blocked ? ' <span class="text-danger">- unavailable (already booked)</span>' : ''));
+                    if (!blocked) {
                         $label.text(base);
                     }
                 });
+
+                syncPickupUnits();
+                if (blockedPickupUnits > 0) {
+                    $('#pickupUnitNote').text('Some pickup units are already booked for this schedule.').show();
+                } else {
+                    $('#pickupUnitNote').hide().text('');
+                }
             }
 
             function refreshVehicleAvailability() {
@@ -275,7 +331,7 @@
                     return_time: $('#return_time').val() || ''
                 };
                 if (!params.depart_date || !params.depart_time) {
-                    unavailableVehicleTypes = [];
+                    unavailableVehicleUnits = [];
                     applyVehicleAvailability();
                     setVehicleNote('', false);
                     return;
@@ -286,9 +342,9 @@
                     data: params,
                     dataType: 'json',
                     success: function (response) {
-                        unavailableVehicleTypes = (response && response.conflicts) ? response.conflicts : [];
+                        unavailableVehicleUnits = (response && response.conflicts) ? response.conflicts : [];
                         applyVehicleAvailability();
-                        setVehicleNote(unavailableVehicleTypes.length ? 'Vehicle is not available. Select another Vehicle Type' : '', true);
+                        setVehicleNote(unavailableVehicleUnits.length ? 'Vehicle is not available. Select another Vehicle Type or Unit' : '', true);
                     },
                     error: function () {
                         setVehicleNote('', false);
@@ -326,10 +382,12 @@
             });
 
             $('#depart_date, #depart_time, #return_date, #return_time').on('change', function () {
-                unavailableVehicleTypes = [];
+                unavailableVehicleUnits = [];
                 applyVehicleAvailability();
                 refreshVehicleAvailability();
             });
+
+            $('input[name="vehicle_type"]').on('change', syncPickupUnits);
 
             function validateStep(step) {
                 var stepEl = $('.form-step[data-step="' + step + '"]');
@@ -369,8 +427,13 @@
 
                 if (step === 3) {
                     var selectedType = $('input[name="vehicle_type"]:checked').val();
-                    if (selectedType && unavailableVehicleTypes.indexOf(selectedType) !== -1) {
-                        alert('Vehicle is not available. Select another Vehicle Type');
+                    var selectedSubtype = $('input[name="vehicle_subtype"]:checked').val();
+                    if (selectedType === pickupTypeName && !selectedSubtype) {
+                        alert('Please select a Pickup Truck Unit (FOTON or STRADA)');
+                        isValid = false;
+                    }
+                    if (selectedType && isUnitUnavailable(selectedType, selectedType === pickupTypeName ? selectedSubtype : '')) {
+                        alert('Vehicle is not available. Select another Vehicle Type or Unit');
                         isValid = false;
                     }
                 }
@@ -380,6 +443,10 @@
 
             function generateSummary() {
                 var vehicleType = $('input[name="vehicle_type"]:checked').val();
+                var vehicleSubtype = $('input[name="vehicle_subtype"]:checked').val();
+                var vehicleLabel = vehicleType
+                    ? (vehicleSubtype ? vehicleType + ' (' + vehicleSubtype + ')' : vehicleType)
+                    : 'N/A';
                 var summaryHTML =
                     '<div class="row">' +
                         '<div class="col-md-6">' +
@@ -402,7 +469,7 @@
                     '<div class="row">' +
                         '<div class="col-md-6">' +
                             '<h6>Vehicle</h6>' +
-                            '<p><strong>Type:</strong> ' + (vehicleType || 'N/A') + '</p>' +
+                            '<p><strong>Type:</strong> ' + vehicleLabel + '</p>' +
                             '<p><strong>Special Request:</strong> ' + ($('#special_request').val() || 'None') + '</p>' +
                         '</div>' +
                         '<div class="col-md-6">' +

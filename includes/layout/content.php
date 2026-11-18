@@ -153,6 +153,9 @@ if (!isset($url) || $url === 'dashboard') {
         case 'Booking Approvals':
             $file = root() . '/bsa/booking-approvals.php';
             break;
+        case 'Booking Edit':
+            $file = root() . '/bsa/booking-edit.php';
+            break;
         case 'Booking & Schedule':
         case 'Booking &amp; Schedule':
             $file = root() . '/bsa/booking-schedule.php';

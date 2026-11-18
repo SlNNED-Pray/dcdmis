@@ -71,6 +71,9 @@ $prefill = [
         .success-icon { font-size: 4rem; color: #198754; }
         .vehicle-type-options .form-check { border: 1px solid #dee2e6; border-radius: 10px; padding: 0.75rem 1rem; margin-bottom: 0.5rem; }
         .vehicle-type-options .form-check-input:checked ~ .form-check-label { font-weight: 600; color: #198754; }
+        .vehicle-subtype-options { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+        .vehicle-subtype-options .form-check { border: 1px solid #dee2e6; border-radius: 10px; padding: 0.5rem 1rem; margin-bottom: 0; }
+        .vehicle-subtype-options .form-check-input:checked ~ .form-check-label { font-weight: 600; color: #198754; }
     </style>
 </head>
 <body>
