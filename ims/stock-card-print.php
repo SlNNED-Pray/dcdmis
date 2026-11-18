@@ -68,10 +68,6 @@ foreach ($movementStatement as $mov) {
 		'office' => $mov['office'] ?: '',
 		'balance' => $balances[$itemId],
 		'days' => '',
-		'stock_no' => $mov['stock_no'],
-		'description' => $mov['description'],
-		'unit' => $mov['unit'],
-		'personnel' => $mov['personnel'] ?: '',
 	];
 }
 
@@ -158,16 +154,26 @@ body { font:11pt "Times New Roman", Times, serif; color:#000; background:#f0f0f0
 .toolbar .hint strong { color:#111; }
 
 /* The A4 "paper": 210mm wide to match A4 portrait. */
-.sheet { width:210mm; min-height:297mm; margin:5px auto; padding:12.2mm 7.9mm 12.7mm 9.4mm; background:#fff; box-shadow:0 2px 8px rgba(0,0,0,.15); }
+.sheet { width:210mm; min-height:297mm; margin:5px auto; padding:8mm 7.9mm 8mm 9.4mm; background:#fff; box-shadow:0 2px 8px rgba(0,0,0,.15); }
 
 /* The template prints at 80% scale inside the A4 margins. */
 .form { width:185.2mm; margin:0 auto; }
+
+/* Department letterhead above the form. */
+.letterhead { text-align:center; margin:0 0 2mm; }
+.letterhead img { display:block; height:11mm; width:auto; margin:0 auto 1mm; }
+.letterhead .line1 { font-family:"Old English Text MT", Arial, serif; font-size:9pt; line-height:1.05; }
+.letterhead .line2 { font-family:"Trajan Pro", Arial, sans-serif; font-size:8pt; font-weight:bold; line-height:1.05; }
+
+/* Division footer image at the bottom of the form. */
+.sheet-footer { text-align:center; margin-top:2mm; }
+.sheet-footer img { width:120mm; max-width:100%; height:auto; display:block; margin:0 auto; }
 
 /* Appendix tag, top right. */
 .appendix { text-align:right; font-size:12.8pt; font-style:italic; line-height:6.6mm; height:6.6mm; }
 
 /* Report title. */
-.report-title { text-align:center; font-size:11.2pt; font-weight:bold; line-height:4.9mm; height:4.9mm; margin:8mm 0 6.4mm; letter-spacing:.4px; }
+.report-title { text-align:center; font-size:11.2pt; font-weight:bold; line-height:5mm; height:5mm; margin:4mm 0 3.5mm; letter-spacing:.4px; }
 
 /* Entity / fund cluster line above the item box. */
 .meta { width:100%; border-collapse:collapse; table-layout:fixed; }
@@ -176,14 +182,14 @@ body { font:11pt "Times New Roman", Times, serif; color:#000; background:#f0f0f0
 
 /* Item header fields (bordered box with a divider before the right column). */
 .fields { width:100%; border-collapse:collapse; table-layout:fixed; margin-bottom:0; }
-.fields td { border:.5pt solid #000; padding:0 1.2mm; font-size:9.6pt; vertical-align:middle; height:5.7mm; }
+.fields td { border:.5pt solid #000; padding:0 1.2mm; font-size:9.6pt; vertical-align:middle; height:5.2mm; }
 .fields tr:first-child td { border-top:1pt solid #000; }
 .fields td:first-child { border-left:1pt solid #000; }
 .fields td:last-child { border-right:1pt solid #000; }
 .fields tr:last-child td { border-bottom:1pt solid #000; }
 .fields td.divider { border-left:1pt solid #000; }
 .fields td.value { font-size:10.5pt; line-height:1.1; overflow-wrap:anywhere; }
-.fields tr.spacer td { height:1.3mm; padding:0; }
+.fields tr.spacer td { height:1mm; padding:0; }
 
 /* The stock card entry table. */
 .entry-table { width:100%; border-collapse:collapse; table-layout:fixed; }
@@ -200,12 +206,12 @@ body { font:11pt "Times New Roman", Times, serif; color:#000; background:#f0f0f0
 .entry-table td.col-date { font-size:9.5pt; white-space:nowrap; }
 .entry-table td.col-text { text-align:left; overflow-wrap:anywhere; font-size:8pt; line-height:1.05; }
 .entry-table td.col-number { font-size:10.5pt; }
-.entry-table td.row-height { height:7.2mm; }
+.entry-table td.row-height { height:6.4mm; }
 .entry-table tbody td { font-size:10pt; line-height:1.05; }
 
 /* Print rules: strip the toolbar and expand the sheet to full A4. */
 @media print {
-	@page { size:A4 portrait; margin:12.2mm 7.9mm 12.7mm 9.4mm; }
+	@page { size:A4 portrait; margin:8mm 7.9mm 8mm 9.4mm; }
 	body { background:#fff; }
 	.toolbar { display:none !important; }
 	.sheet { margin:0; padding:0; box-shadow:none; width:auto; min-height:0; }
@@ -235,6 +241,15 @@ body { font:11pt "Times New Roman", Times, serif; color:#000; background:#f0f0f0
 <div class="form">
 
 	<div class="appendix">Appendix 58</div>
+
+	<!-- Department letterhead, matching the other IMS printouts. -->
+	<div class="letterhead">
+		<img src="image/logo.png" alt="Department of Education logo">
+		<div class="line1">Republic of the Philippines</div>
+		<div class="line1">Department of Education</div>
+		<div class="line2">Region IX &ndash; Zamboanga Peninsula</div>
+		<div class="line2">SCHOOLS DIVISION OF DIPOLOG CITY</div>
+	</div>
 
 	<div class="report-title">STOCK CARD</div>
 
@@ -338,6 +353,11 @@ body { font:11pt "Times New Roman", Times, serif; color:#000; background:#f0f0f0
 			<?php endfor; ?>
 		</tbody>
 	</table>
+
+	<!-- Division footer image, matching the other IMS printouts. -->
+	<div class="sheet-footer">
+		<img src="image/footer.png" alt="Footer Image">
+	</div>
 
 </div>
 </div>

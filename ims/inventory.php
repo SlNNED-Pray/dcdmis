@@ -260,10 +260,10 @@ imsNav('inventory');
         </form>
         <div class="table-responsive">
             <table class="table table-hover" id="ims-items-table">
-                <thead><tr><th>Stock No.</th><th>Description</th><th>Group</th><th>Unit</th><th>Total Units</th><th>On Hand</th><?php if ($dateMode === 'as_of'): ?><th>On Hand as of <?= e($asOfLabel) ?></th><?php elseif ($dateMode === 'range'): ?><th>Qty moved (<?= e($rangeLabel) ?>)</th><?php endif; ?><th>Minimum</th><th>Status</th><th>Remarks</th><th>Action</th></tr></thead>
+                <thead><tr><th>Stock No.</th><th>Description</th><th>Group</th><th>Unit</th><th>Total Units</th><?php if ($dateMode === 'as_of'): ?><th>On Hand as of <?= e($asOfLabel) ?></th><?php elseif ($dateMode === 'range'): ?><th>Qty moved (<?= e($rangeLabel) ?>)</th><?php endif; ?><th>Minimum</th><th>Status</th><th>Remarks</th><th>Action</th></tr></thead>
                 <tbody>
                 <?php if (!$items): ?>
-                    <tr><td colspan="<?= $dateMode !== '' ? 11 : 10 ?>" class="text-center text-muted my-3">No items match the selected filter.</td></tr>
+                    <tr><td colspan="<?= $dateMode !== '' ? 10 : 9 ?>" class="text-center text-muted my-3">No items match the selected filter.</td></tr>
                 <?php endif; ?>
                 <?php foreach ($items as $item): ?>
                     <?php $dateRow = $dateInfo[(int) $item['id']] ?? ['as_of_qty' => (int) $item['quantity'], 'range_qty' => 0, 'range_count' => 0]; ?>
@@ -277,7 +277,6 @@ imsNav('inventory');
                         <td><small><?= e($item['item_group'] ?: 'Ungrouped') ?></small></td>
                         <td><?= e($item['unit']) ?></td>
                         <td><?php $tu = (int) $item['total_units']; ?><?= $tu ? $tu . (!empty($unitsUnit) ? ' ' . e(ucfirst($unitsUnit)) : '') : '—' ?></td>
-                        <td><?= (int) $item['quantity'] ?></td>
                         <?php if ($dateMode === 'as_of'): ?>
                             <td><?= (int) $dateRow['as_of_qty'] ?></td>
                         <?php elseif ($dateMode === 'range'): ?>

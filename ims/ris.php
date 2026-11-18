@@ -213,33 +213,34 @@ imsNav('ris');
         <td>
             <?php if (empty($ris['items'])): ?>—<?php endif; ?>
             <?php foreach ($ris['items'] as $detail): ?>
+                <?php
+                $detailStatus = strtolower((string) $detail['status']);
+                $statusLabel = in_array($detailStatus, ['issued', 'approved'], true)
+                    ? 'Approved'
+                    : ($detailStatus === 'disapproved' ? 'Disapproved' : ucfirst($detailStatus ?: 'pending'));
+                ?>
                 <div class="mb-1">
                     <?php if (!$canManage): ?>
-                        <span class="text-muted small"><?= e(ucfirst((string) $detail['status'])) ?></span>
-                    <?php elseif ($detail['has_stock']): ?>
-                        <?php if (strtolower((string) $detail['status']) === 'pending'): ?>
-                            <form method="post" class="d-inline" onsubmit="return confirm('Issue this item and deduct from stock?');">
+                        <span class="text-muted small"><?= e($statusLabel) ?></span>
+                    <?php elseif ($detailStatus === 'pending'): ?>
+                        <?php if ($detail['has_stock']): ?>
+                            <form method="post" class="d-inline mr-1" onsubmit="return confirm('Approve this item and deduct from stock?');">
                                 <?= csrf_field(); ?>
                                 <input type="hidden" name="issue-ris-item" value="<?= e(cipher((string) $detail['detail_id'])) ?>">
-                                <button class="btn btn-sm btn-success" style="min-width:118px" type="submit"><i class="fas fa-check"></i> Issued</button>
+                                <button class="btn btn-sm btn-success" style="min-width:105px" type="submit"><i class="fas fa-check"></i> Approved</button>
                             </form>
-                        <?php elseif (strtolower((string) $detail['status']) === 'issued'): ?>
-                            <button type="button" class="btn btn-sm btn-success" style="min-width:118px" disabled><i class="fas fa-box-open"></i> Issued</button>
-                        <?php else: ?>
-                            <button type="button" class="btn btn-sm btn-secondary" style="min-width:118px" disabled><?= e($detail['status']) ?></button>
                         <?php endif; ?>
+                        <form method="post" class="d-inline" onsubmit="return confirm('Disapprove this item? It will be moved to Disapproved RIS.');">
+                            <?= csrf_field(); ?>
+                            <input type="hidden" name="disapprove-ris-item" value="<?= e(cipher((string) $detail['detail_id'])) ?>">
+                            <button class="btn btn-sm btn-danger" style="min-width:105px" type="submit"><i class="fas fa-times"></i> Disapproved</button>
+                        </form>
+                    <?php elseif (in_array($detailStatus, ['issued', 'approved'], true)): ?>
+                        <button type="button" class="btn btn-sm btn-success" style="min-width:118px" disabled><i class="fas fa-check-circle"></i> Approved</button>
+                    <?php elseif ($detailStatus === 'disapproved'): ?>
+                        <button type="button" class="btn btn-sm btn-danger" style="min-width:118px" disabled><i class="fas fa-times-circle"></i> Disapproved</button>
                     <?php else: ?>
-                        <?php if (strtolower((string) $detail['status']) === 'pending'): ?>
-                            <form method="post" class="d-inline" onsubmit="return confirm('Disapprove this item?');">
-                                <?= csrf_field(); ?>
-                                <input type="hidden" name="disapprove-ris-item" value="<?= e(cipher((string) $detail['detail_id'])) ?>">
-                                <button class="btn btn-sm btn-danger" style="min-width:118px" type="submit"><i class="fas fa-times"></i> Disapprove</button>
-                            </form>
-                        <?php elseif (strtolower((string) $detail['status']) === 'approved'): ?>
-                            <button type="button" class="btn btn-sm btn-info" style="min-width:118px" disabled><i class="fas fa-check-circle"></i> Approved</button>
-                        <?php else: ?>
-                            <button type="button" class="btn btn-sm btn-secondary" style="min-width:118px" disabled><?= e($detail['status']) ?></button>
-                        <?php endif; ?>
+                        <button type="button" class="btn btn-sm btn-secondary" style="min-width:118px" disabled><?= e($statusLabel) ?></button>
                     <?php endif; ?>
                 </div>
             <?php endforeach; ?>
