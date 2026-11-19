@@ -173,6 +173,48 @@ function imsRecordCostHistory(int $itemId, float $newCost, float $oldCost = 0.0,
     return $result !== false;
 }
 
+/**
+ * Resolve the station name for a RIS receiver.
+ *
+ * The receiver name in the workbook is not always the same as the employee
+ * master record (for example "Jessie Samaniego" vs "Jesse Pandigan
+ * Samaniego"), so exact normalized-name variants are tried first and the
+ * slip employee is used as a fallback.
+ */
+function risReceiverStationName(string $receiverName, int $fallbackEmployeeId): string
+{
+    $normalized = str_replace(['ñ', 'Ñ'], ['n', 'N'], $receiverName);
+    $key = strtolower(trim((string) preg_replace('/\s+/', ' ', preg_replace('/[^A-Za-z0-9]+/', ' ', $normalized))));
+
+    $employeeId = $fallbackEmployeeId;
+    if ($key !== '') {
+        foreach (query('SELECT id, first_name, middle_name, last_name FROM employees') as $employee) {
+            $first = trim((string) $employee['first_name']);
+            $middle = trim((string) $employee['middle_name']);
+            $last = trim((string) $employee['last_name']);
+            $variants = array_unique(array_filter(array_map(static function (string $name): string {
+                $name = str_replace(['ñ', 'Ñ'], ['n', 'N'], $name);
+                return strtolower(trim((string) preg_replace('/\s+/', ' ', preg_replace('/[^A-Za-z0-9]+/', ' ', $name))));
+            }, [
+                "$first $last",
+                "$first $middle $last",
+                $middle !== '' ? "$first " . mb_substr($middle, 0, 1) . " $last" : '',
+            ])));
+
+            if (in_array($key, $variants, true)) {
+                $employeeId = (int) $employee['id'];
+                break;
+            }
+        }
+    }
+
+    if ($employeeId <= 0) {
+        return '';
+    }
+
+    return (string) (risDivisionOfficeFromEmployee($employeeId)['office'] ?? '');
+}
+
 function risDivisionOfficeFromEmployee(int $employeeId): array
 {
     $station = station($employeeId);

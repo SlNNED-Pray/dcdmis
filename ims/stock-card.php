@@ -52,7 +52,7 @@ $rows = array_values(array_filter($rows, static function (array $row) use ($stoc
 	<form method="get" class="form-inline"><?= imsEmbedInput() ?>
 		<input type="hidden" name="v" value="<?= e(cipher('Stock Card')) ?>">
 		<label class="mr-2" for="stock-card-filter">Search</label>
-		<input class="form-control mr-2" id="stock-card-filter" name="filter" list="stock-card-filter-options" value="<?= e($stockCardFilter) ?>" placeholder="Name, office, stock no., or item" autocomplete="off">
+		<input class="form-control mr-2" id="stock-card-filter" name="filter" list="stock-card-filter-options" value="<?= e($stockCardFilter) ?>" placeholder="Name, station, stock no., or item" autocomplete="off">
 		<datalist id="stock-card-filter-options">
 			<?php foreach ($filterOptions as $option): ?><option value="<?= e($option) ?>"></option><?php endforeach; ?>
 		</datalist>
@@ -67,7 +67,7 @@ $rows = array_values(array_filter($rows, static function (array $row) use ($stoc
 	<div class="card-body">
 		<div class="table-responsive">
 			<table class="table table-bordered table-hover" id="stock-card-report">
-				<thead><tr><th>Date</th><th>Reference</th><th>Receipt</th><th>Name of Personnel</th><th>Office Name</th><th>Qty</th><th>Remarks</th></tr></thead>
+				<thead><tr><th>Date</th><th>Reference</th><th>Receipt</th><th>Name of Personnel</th><th>Station</th><th>Qty</th><th>Remarks</th></tr></thead>
 				<tbody>
 				<?php foreach ($rows as $row): ?>
 					<tr>

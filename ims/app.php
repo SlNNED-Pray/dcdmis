@@ -1832,6 +1832,7 @@ if (isset($_POST['issue-ris-item'])) {
     $detail = find(
         "SELECT d.id, d.ris_id, d.item_id, d.quantity, d.unit, d.pcs_per_unit, d.status,
                 CONCAT(e.first_name, ' ', e.last_name) AS requesting_employee,
+                r.employee_id,
                 r.received_by_name,
                 r.office AS ris_office
          FROM requisition_slip_items d
@@ -1888,13 +1889,20 @@ if (isset($_POST['issue-ris-item'])) {
         if ($personnelName === '') {
             $personnelName = $userUnit !== '' ? $userUnit : $item['unit'];
         }
+        $stationName = risReceiverStationName(
+            (string) ($detail['received_by_name'] ?? ''),
+            (int) ($detail['employee_id'] ?? 0)
+        );
+        if ($stationName === '') {
+            $stationName = trim((string) ($detail['ris_office'] ?? ''));
+        }
         insert('stock_movements', [
             'item_id' => $detail['item_id'],
             'movement_type' => 'Issue',
             'quantity' => -$requestedPieces,
             'reference_no' => $risRef ? $risRef['ris_no'] : 'RIS-' . $detail['ris_id'],
             'personnel' => $personnelName,
-            'office' => trim((string) ($detail['ris_office'] ?? '')),
+            'office' => $stationName,
             'remarks' => 'Issued ' . $requestedQty . ' ' . ($userUnit !== '' ? $userUnit : $item['unit']),
         ]);
         createSystemLog(

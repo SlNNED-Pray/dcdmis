@@ -154,20 +154,20 @@ body { font:11pt "Times New Roman", Times, serif; color:#000; background:#f0f0f0
 .toolbar .hint strong { color:#111; }
 
 /* The A4 "paper": 210mm wide to match A4 portrait. */
-.sheet { width:210mm; min-height:297mm; margin:5px auto; padding:8mm 7.9mm 8mm 9.4mm; background:#fff; box-shadow:0 2px 8px rgba(0,0,0,.15); }
+.sheet { width:210mm; min-height:297mm; margin:5px auto; padding:8mm 0 8mm 0; background:#fff; box-shadow:0 2px 8px rgba(0,0,0,.15); }
 
 /* The template prints at 80% scale inside the A4 margins. */
 .form { width:185.2mm; margin:0 auto; }
 
-/* Department letterhead above the form. */
-.letterhead { text-align:center; margin:0 0 2mm; }
-.letterhead img { display:block; height:11mm; width:auto; margin:0 auto 1mm; }
-.letterhead .line1 { font-family:"Old English Text MT", Arial, serif; font-size:9pt; line-height:1.05; }
-.letterhead .line2 { font-family:"Trajan Pro", Arial, sans-serif; font-size:8pt; font-weight:bold; line-height:1.05; }
+/* Department letterhead above the form, sized like the RSMI printout. */
+.letterhead { text-align:center; margin-bottom:1px; }
+.letterhead img { display:block; height:2cm; width:auto; margin:0 auto 1px; }
+.letterhead .line1 { font-family:"Old English Text MT", Arial, sans-serif; font-size:0.35278cm; line-height:1.05; }
+.letterhead .line2 { font-family:"Trajan Pro", Arial, sans-serif; font-size:0.3175cm; font-weight:bold; line-height:1.05; }
 
 /* Division footer image at the bottom of the form. */
-.sheet-footer { text-align:center; margin-top:2mm; }
-.sheet-footer img { width:120mm; max-width:100%; height:auto; display:block; margin:0 auto; }
+.sheet-footer { text-align:center; margin-top:1mm; margin-left:auto; margin-right:auto; }
+.sheet-footer img { width:168mm; height:21.6mm; max-width:none; object-fit:fill; display:block; margin:0 auto; }
 
 /* Appendix tag, top right. */
 .appendix { text-align:right; font-size:12.8pt; font-style:italic; line-height:6.6mm; height:6.6mm; }
@@ -206,16 +206,19 @@ body { font:11pt "Times New Roman", Times, serif; color:#000; background:#f0f0f0
 .entry-table td.col-date { font-size:9.5pt; white-space:nowrap; }
 .entry-table td.col-text { text-align:left; overflow-wrap:anywhere; font-size:8pt; line-height:1.05; }
 .entry-table td.col-number { font-size:10.5pt; }
-.entry-table td.row-height { height:6.4mm; }
+.entry-table td.row-height { height:5.7mm; }
 .entry-table tbody td { font-size:10pt; line-height:1.05; }
 
 /* Print rules: strip the toolbar and expand the sheet to full A4. */
 @media print {
-	@page { size:A4 portrait; margin:8mm 7.9mm 8mm 9.4mm; }
+	@page { size:A4 portrait; margin:1mm; }
 	body { background:#fff; }
 	.toolbar { display:none !important; }
-	.sheet { margin:0; padding:0; box-shadow:none; width:auto; min-height:0; }
+	/* 295mm = A4 height minus the 1mm top and bottom page margins. */
+	.sheet { position:relative; margin:0; padding:0; box-shadow:none; width:auto; height:295mm; min-height:295mm; }
 	.form { width:185.2mm; margin:0 auto; }
+	/* Pin the footer to the bottom of the printed page regardless of row count. */
+	.sheet-footer { position:absolute; left:0; right:0; bottom:0; margin-top:0; }
 	.entry-table thead { display:table-header-group; }
 	.entry-table tr { page-break-inside:avoid; }
 }

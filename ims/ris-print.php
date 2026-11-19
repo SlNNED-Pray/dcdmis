@@ -137,7 +137,10 @@ $sigEmployeeJson = json_encode(array_map(static function ($e) {
 
 $entityName = 'DEPED DIVISION OF DIPOLOG CITY';
 $divisionName = $ris['division'] ?: 'Dipolog City';
-$officeName = !empty($ris['employee_id']) ? risDivisionOfficeFromEmployee((int) $ris['employee_id'])['office'] : ($ris['office'] ?: '');
+$officeName = risReceiverStationName($receivedByName, (int) ($ris['employee_id'] ?? 0));
+if ($officeName === '') {
+    $officeName = !empty($ris['employee_id']) ? risDivisionOfficeFromEmployee((int) $ris['employee_id'])['office'] : ($ris['office'] ?: '');
+}
 $requestedName = $ris['employee'] ?: '____________________';
 $requestedDesignation = $designation ?: '____________________';
 $risDate = date('F j, Y', strtotime($ris['created_at']));
@@ -208,7 +211,7 @@ body { font:11pt "Times New Roman", Times, serif; color:#111; background:#f0f0f0
 .sig-table .head { font-weight:bold; text-align:center; margin-bottom:12px; }
 .sig-lines { width:100%; border-bottom:1px solid #111; margin:32px 0 2px; }
 .sig-lines.small { margin-top:26px; }
-.sheet-footer { position:absolute; left:9mm; right:9mm; bottom:8mm; }
+.sheet-footer { position:absolute; left:9mm; right:9mm; bottom:2mm; }
 .code { position:absolute; bottom:34mm; left:9mm; font-size:9pt; }
 .sig-modal { position:fixed; inset:0; background:rgba(0,0,0,.55); display:flex; align-items:center; justify-content:center; z-index:9999; }
 .sig-modal-box { background:#fff; border:1px solid #333; box-shadow:0 6px 24px rgba(0,0,0,.4); width:640px; max-width:94vw; max-height:92vh; overflow:auto; padding:22px 26px; font:12pt "Times New Roman",serif; }
@@ -224,11 +227,11 @@ body { font:11pt "Times New Roman", Times, serif; color:#111; background:#f0f0f0
 .sig-modal .actions button, .sig-modal .actions a { display:inline-block; padding:7px 26px; margin:0 6px; font-size:11pt; cursor:pointer; text-decoration:none; border:1px solid #333; background:#fff; color:#111; }
 .sig-modal .actions button.btn-go { background:#007bff; border-color:#007bff; color:#fff; }
 @media print {
-	@page { size:A4 portrait; margin:0.2inch; }
+	@page { size:A4 portrait; margin:0.1inch; }
 	body { background:#fff; }
 	.toolbar { display:none !important; }
 	.sig-modal { display:none !important; }
-	.sheet { margin:0; padding:5mm 6mm; box-shadow:none; }
+	.sheet { margin:0; padding:1mm 1mm; box-shadow:none; }
 }
 </style>
 </head>
