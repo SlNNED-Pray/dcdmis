@@ -154,12 +154,16 @@ if (!$showSigForm && !empty($ris) && !empty($lines)) {
         if ($dup) {
             continue;
         }
+        $receivingPersonnel = $receivedByName !== ''
+            ? $receivedByName
+            : ($ris['employee'] !== '' ? $ris['employee'] : 'Unknown');
+
         insert('stock_movements', [
             'item_id' => (int) $line['item_id'],
             'movement_type' => 'Issue',
             'quantity' => -(int) $line['quantity'],
             'reference_no' => $ris['ris_no'],
-            'personnel' => $issuedByName !== '' ? $issuedByName : 'Unknown',
+            'personnel' => $receivingPersonnel,
             'office' => $officeName !== '' ? $officeName : ($ris['office'] ?: ''),
             'remarks' => ($receivedByName !== '' ? 'Received by ' . $receivedByName : 'Issued')
                 . ($ris['purpose'] !== '' ? ' — ' . $ris['purpose'] : ''),

@@ -1832,6 +1832,7 @@ if (isset($_POST['issue-ris-item'])) {
     $detail = find(
         "SELECT d.id, d.ris_id, d.item_id, d.quantity, d.unit, d.pcs_per_unit, d.status,
                 CONCAT(e.first_name, ' ', e.last_name) AS requesting_employee,
+                r.received_by_name,
                 r.office AS ris_office
          FROM requisition_slip_items d
          JOIN requisition_slips r ON r.id = d.ris_id
@@ -1880,7 +1881,10 @@ if (isset($_POST['issue-ris-item'])) {
     if ($statusResult !== false && $stockResult !== false) {
         commit();
         $risRef = find('SELECT ris_no FROM requisition_slips WHERE id = ?', [(int) $detail['ris_id']]);
-        $personnelName = trim((string) ($detail['requesting_employee'] ?? ''));
+        $personnelName = trim((string) ($detail['received_by_name'] ?? ''));
+        if ($personnelName === '') {
+            $personnelName = trim((string) ($detail['requesting_employee'] ?? ''));
+        }
         if ($personnelName === '') {
             $personnelName = $userUnit !== '' ? $userUnit : $item['unit'];
         }

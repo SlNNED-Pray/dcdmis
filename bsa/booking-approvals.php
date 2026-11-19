@@ -45,6 +45,7 @@ $editBaseUrl = uri() . '/bsa/?v=' . encode('Booking Edit');
 function bsaQuickRejectForm(string $actionUrl, string $idField, int $id, string $action): string
 {
     return '<button type="button" class="btn btn-sm btn-outline-danger bsa-reject-open"'
+        . ' onclick="bsaOpenRejectPopup(this)"'
         . ' data-url="' . htmlspecialchars($actionUrl) . '"'
         . ' data-id-field="' . htmlspecialchars($idField) . '"'
         . ' data-id="' . $id . '"'
@@ -1492,80 +1493,86 @@ foreach (['dtcsc_flash', 'vehicle_flash', 'joborder_flash'] as $flashKey) {
 <?php endif; ?>
 
 <?php if (!$printMode): ?>
-<!-- Rejection reason (shared modal for Pending rows) -->
-<div class="modal fade" id="bsaRejectModal" tabindex="-1" role="dialog" aria-labelledby="bsaRejectModalLabel" aria-hidden="true">
-    <div class="modal-dialog" role="document">
-        <div class="modal-content">
-            <div class="modal-header py-2">
-                <h6 class="modal-title font-weight-bold text-danger mb-0" id="bsaRejectModalLabel">
-                    <i class="fa fa-times-circle mr-1"></i>Reason for Rejected
-                </h6>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-            </div>
-            <form id="bsaRejectForm" method="POST">
-                <input type="hidden" name="csrf_token" value="<?php echo generateCsrfToken(); ?>">
-                <input type="hidden" id="bsaRejectRecordId" name="booking_id" value="">
-                <input type="hidden" id="bsaRejectAction" name="action" value="">
-                <div class="modal-body py-3">
-                    <p class="text-muted small mb-2">Please state the reason for rejecting this request. It will be saved with the booking.</p>
-                    <div class="form-group mb-0">
-                        <label for="bsaRejectRemarks">Reason <span class="text-danger">*</span></label>
-                        <textarea class="form-control" id="bsaRejectRemarks" name="remarks" rows="4" required placeholder="e.g. Schedule conflict with another activity."></textarea>
-                    </div>
-                </div>
-                <div class="modal-footer py-2">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-danger"><i class="fa fa-times-circle mr-1"></i>Reject Request</button>
-                </div>
-            </form>
+<!-- Rejection reason popup. Self-contained so it works regardless of jQuery/Bootstrap load order. -->
+<div id="bsaRejectPopup" class="bsa-reject-popup" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:20000;background:rgba(0,0,0,.55);align-items:center;justify-content:center;padding:15px;"
+     onclick="if (event.target === this) { bsaCloseRejectPopup(); }">
+    <div style="background:#fff;border-radius:.35rem;box-shadow:0 .5rem 1.5rem rgba(0,0,0,.3);width:100%;max-width:480px;overflow:hidden;">
+        <div style="padding:.75rem 1rem;border-bottom:1px solid #e3e6f0;display:flex;align-items:center;justify-content:space-between;">
+            <strong class="text-danger mb-0"><i class="fa fa-times-circle mr-1"></i>Reason for Rejected</strong>
+            <button type="button" onclick="bsaCloseRejectPopup()" aria-label="Close" style="border:0;background:none;font-size:1.5rem;line-height:1;padding:0 .25rem;">&times;</button>
         </div>
+        <form id="bsaRejectForm" method="POST">
+            <input type="hidden" name="csrf_token" value="<?php echo generateCsrfToken(); ?>">
+            <input type="hidden" id="bsaRejectRecordId" name="booking_id" value="">
+            <input type="hidden" id="bsaRejectAction" name="action" value="">
+            <div style="padding:1rem;">
+                <p class="text-muted small mb-2">Please state the reason for rejecting this request. It will be saved with the booking.</p>
+                <div class="form-group mb-0">
+                    <label for="bsaRejectRemarks">Reason <span class="text-danger">*</span></label>
+                    <textarea class="form-control" id="bsaRejectRemarks" name="remarks" rows="4" required placeholder="e.g. Schedule conflict with another activity."></textarea>
+                </div>
+            </div>
+            <div style="padding:.75rem 1rem;border-top:1px solid #e3e6f0;display:flex;justify-content:flex-end;gap:.5rem;">
+                <button type="button" class="btn btn-secondary" onclick="bsaCloseRejectPopup()">Cancel</button>
+                <button type="submit" class="btn btn-danger" id="bsaRejectSubmit"><i class="fa fa-times-circle mr-1"></i>Reject Request</button>
+            </div>
+        </form>
     </div>
 </div>
 
 <script>
+var bsaRejectPreviousOverflow = '';
+
+function bsaOpenRejectPopup(button) {
+    var popup = document.getElementById('bsaRejectPopup');
+    if (!popup || !button) {
+        return;
+    }
+
+    var form = document.getElementById('bsaRejectForm');
+    var recordId = document.getElementById('bsaRejectRecordId');
+    var actionInput = document.getElementById('bsaRejectAction');
+    var remarks = document.getElementById('bsaRejectRemarks');
+    var submitButton = document.getElementById('bsaRejectSubmit');
+
+    form.action = button.getAttribute('data-url');
+    recordId.name = button.getAttribute('data-id-field');
+    recordId.value = button.getAttribute('data-id');
+    actionInput.value = button.getAttribute('data-action');
+    remarks.value = '';
+    submitButton.disabled = false;
+
+    bsaRejectPreviousOverflow = document.body.style.overflow;
+    popup.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+    remarks.focus();
+}
+
+function bsaCloseRejectPopup() {
+    var popup = document.getElementById('bsaRejectPopup');
+    if (!popup) {
+        return;
+    }
+    popup.style.display = 'none';
+    document.body.style.overflow = bsaRejectPreviousOverflow;
+}
+
 (function () {
-    // This view is rendered before jQuery/Bootstrap are loaded by the shell,
-    // so wait for them instead of binding the handler immediately.
-    function initRejectModal() {
-        if (window.jQuery === undefined) {
-            setTimeout(initRejectModal, 50);
-            return;
-        }
-        jQuery(function ($) {
-            var $modal = $('#bsaRejectModal');
-            var $form = $('#bsaRejectForm');
-            if (!$modal.length || !$form.length) {
-                return;
+    var form = document.getElementById('bsaRejectForm');
+    if (form) {
+        form.addEventListener('submit', function () {
+            var submitButton = document.getElementById('bsaRejectSubmit');
+            if (submitButton) {
+                submitButton.disabled = true;
             }
-
-            var $recordId = $('#bsaRejectRecordId');
-            var $action = $('#bsaRejectAction');
-            var $remarks = $('#bsaRejectRemarks');
-
-            $(document).on('click', '.bsa-reject-open', function (event) {
-                event.preventDefault();
-                var $button = $(this);
-
-                $form.attr('action', $button.attr('data-url'));
-                $recordId.attr('name', $button.attr('data-id-field'));
-                $recordId.val($button.attr('data-id'));
-                $action.val($button.attr('data-action'));
-                $remarks.val('');
-
-                $modal.modal('show');
-            });
-
-            $form.on('submit', function () {
-                $form.find('button[type="submit"]').prop('disabled', true);
-            });
-
-            $modal.on('hidden.bs.modal', function () {
-                $form.find('button[type="submit"]').prop('disabled', false);
-            });
         });
     }
 
-    initRejectModal();
+    document.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape' || event.keyCode === 27) {
+            bsaCloseRejectPopup();
+        }
+    });
 }());
 </script>
 
