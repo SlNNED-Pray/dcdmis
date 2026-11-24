@@ -11,15 +11,32 @@ $lowStockCount = (int) ($lowStockResult[0]['total'] ?? 0);
 $pendingRis = (int) ($pendingRisResult[0]['total'] ?? 0);
 $pendingPr = (int) ($pendingPrResult[0]['total'] ?? 0);
 
-$topItems = query('SELECT stock_no, description, quantity FROM items WHERE quantity > 0 ORDER BY quantity DESC, description ASC LIMIT 10');
+$stockRows = query('SELECT stock_no, description, quantity FROM items WHERE quantity > 0 ORDER BY quantity DESC, description ASC') ?: [];
+$stockChartItems = [];
+$stockCategoryKeys = [];
+foreach ($stockRows as $stockRow) {
+    $stockDescription = (string) $stockRow['description'];
+    $stockCategory = imsItemCategory($stockDescription, (string) $stockRow['stock_no']);
+    $stockChartItems[] = [
+        'label' => mb_strlen($stockDescription) > 32 ? mb_substr($stockDescription, 0, 29) . '...' : $stockDescription,
+        'full' => $stockDescription,
+        'value' => (int) $stockRow['quantity'],
+        'category' => $stockCategory,
+    ];
+    $stockCategoryKeys[$stockCategory] = true;
+}
+$stockChartCategories = array_keys($stockCategoryKeys);
+sort($stockChartCategories, SORT_NATURAL | SORT_FLAG_CASE);
 $stockChart = [
-    'labels' => array_map(static function (array $item): string {
-        $description = (string) $item['description'];
-        return mb_strlen($description) > 32 ? mb_substr($description, 0, 29) . '...' : $description;
-    }, $topItems),
-    'full' => array_map(static fn(array $item): string => (string) $item['description'], $topItems),
-    'values' => array_map(static fn(array $item): int => (int) $item['quantity'], $topItems),
+    'labels' => array_column($stockChartItems, 'label'),
+    'full' => array_column($stockChartItems, 'full'),
+    'values' => array_column($stockChartItems, 'value'),
+    'items' => $stockChartItems,
+    'categories' => $stockChartCategories,
+    'rowHeight' => 28,
 ];
+$stockItemCount = count($stockChartItems);
+$stockChartInitialHeight = max(320, ($stockItemCount * $stockChart['rowHeight']) + 40);
 
 $categoryTotals = [];
 foreach (query('SELECT stock_no, description, quantity, unit_cost FROM items') as $item) {
@@ -382,15 +399,28 @@ imsNav('inventory');
 <div class="row mb-4">
     <div class="col-xl-7">
         <div class="card shadow h-100">
-            <div class="card-header py-3">
+            <div class="card-header py-3 d-flex justify-content-between align-items-center">
                 <h6 class="m-0 font-weight-bold text-primary">Quantity on hand by product</h6>
+                <?php if ($stockChart['labels'] && $stockChart['categories']): ?>
+                    <label class="mb-0 small text-muted">
+                        <span class="sr-only">Filter by category</span>
+                        <select id="imsStockCategory" class="form-control form-control-sm">
+                            <option value="">All categories</option>
+                            <?php foreach ($stockChart['categories'] as $stockCategory): ?>
+                                <option value="<?= e($stockCategory) ?>"><?= e($stockCategory) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </label>
+                <?php endif; ?>
             </div>
             <div class="card-body">
                 <?php if ($stockChart['labels']): ?>
-                    <div class="chart-bar" style="height:20rem;">
+                    <div id="imsStockChartInner" class="chart-bar" style="position:relative; height:<?= (int) $stockChartInitialHeight ?>px; width:100%;">
                         <canvas id="imsStockChart"></canvas>
                     </div>
-                    <p class="mb-0 text-muted small">Top 10 products by quantity on hand.</p>
+                    <p id="imsStockCaption" class="mb-0 text-muted small">
+                        Showing all <?= number_format($stockItemCount) ?> <?= $stockItemCount === 1 ? 'product' : 'products' ?> by quantity on hand.
+                    </p>
                 <?php else: ?>
                     <p class="mb-0 text-muted">No stock is currently on hand.</p>
                 <?php endif; ?>
@@ -445,7 +475,7 @@ imsNav('inventory');
             </div>
             <div class="card-body">
                 <?php if ($reorderAlerts): ?>
-                    <div class="table-responsive" style="max-height:20rem; overflow-y:auto;">
+                    <div class="table-responsive">
                         <table class="table table-sm table-hover mb-0">
                             <thead class="thead-light">
                                 <tr>
@@ -573,7 +603,7 @@ imsNav('inventory');
         <a class="btn btn-primary btn-sm" href="<?= imsUri('Stock and Inventory') ?>">View stock</a>
     </div>
     <div class="card-body p-0">
-        <div class="table-responsive" style="max-height:24rem; overflow-y:auto;">
+        <div class="table-responsive">
             <table class="table table-sm table-hover mb-0">
                 <thead class="thead-light">
                     <tr>
@@ -641,7 +671,7 @@ imsNav('inventory');
                     <i class="fas fa-box-open fa-2x d-block mb-2"></i>
                     No available stocks recorded.
                 </div>
-                <div class="table-responsive" style="max-height:65vh; overflow-y:auto;">
+                <div class="table-responsive">
                     <div id="pisAvailableStocksChartWrap" style="position:relative; height:<?= max(260, count($availableStockItems) * 26 + 40) ?>px;">
                         <canvas id="pisAvailableStocksChart"></canvas>
                     </div>
@@ -737,7 +767,7 @@ imsNav('inventory');
                     <i class="fas fa-box-open fa-2x d-block mb-2"></i>
                     No items match the selected filters.
                 </div>
-                <div class="table-responsive" style="max-height:60vh; overflow-y:auto;">
+                <div class="table-responsive">
                     <div id="siChartWrap" style="position:relative; height:300px;">
                         <canvas id="siChart"></canvas>
                     </div>
@@ -775,13 +805,33 @@ imsNav('inventory');
     var stockCanvas = document.getElementById('imsStockChart');
     if (stockCanvas) {
         var stockData = <?= json_encode($stockChart, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) ?>;
-        new Chart(stockCanvas.getContext('2d'), {
+        var stockCategorySelect = document.getElementById('imsStockCategory');
+        var stockCaption = document.getElementById('imsStockCaption');
+        var stockInner = document.getElementById('imsStockChartInner');
+        var stockVisibleRows = stockData.items;
+
+        function stockChartHeight(rows) {
+            return Math.max(320, (rows.length * stockData.rowHeight) + 40);
+        }
+
+        function stockCaptionText(rows, category) {
+            return 'Showing all ' + rows.length.toLocaleString('en-PH')
+                + (rows.length === 1 ? ' product' : ' products')
+                + (category ? ' in ' + category : '')
+                + ' by quantity on hand.';
+        }
+
+        if (stockInner) {
+            stockInner.style.height = stockChartHeight(stockVisibleRows) + 'px';
+        }
+
+        var stockChart = new Chart(stockCanvas.getContext('2d'), {
             type: 'horizontalBar',
             data: {
-                labels: stockData.labels,
+                labels: stockVisibleRows.map(function (row) { return row.label; }),
                 datasets: [{
                     label: 'On hand',
-                    data: stockData.values,
+                    data: stockVisibleRows.map(function (row) { return row.value; }),
                     backgroundColor: '#4e73df',
                     borderColor: '#4e73df',
                     borderWidth: 1
@@ -795,7 +845,9 @@ imsNav('inventory');
                     intersect: false,
                     callbacks: {
                         title: function (items) {
-                            return stockData.full[items[0].index];
+                            return stockVisibleRows[items[0].index]
+                                ? stockVisibleRows[items[0].index].full
+                                : '';
                         },
                         label: function (item) {
                             return 'On hand: ' + Number(item.xLabel).toLocaleString('en-PH');
@@ -813,6 +865,28 @@ imsNav('inventory');
                 }
             }
         });
+
+        if (stockCategorySelect) {
+            stockCategorySelect.addEventListener('change', function () {
+                var category = stockCategorySelect.value;
+                stockVisibleRows = category
+                    ? stockData.items.filter(function (row) { return row.category === category; })
+                    : stockData.items;
+
+                if (stockInner) {
+                    stockInner.style.height = stockChartHeight(stockVisibleRows) + 'px';
+                }
+
+                stockChart.data.labels = stockVisibleRows.map(function (row) { return row.label; });
+                stockChart.data.datasets[0].data = stockVisibleRows.map(function (row) { return row.value; });
+                stockChart.resize();
+                stockChart.update();
+
+                if (stockCaption) {
+                    stockCaption.textContent = stockCaptionText(stockVisibleRows, category);
+                }
+            });
+        }
     }
 
     var valueCanvas = document.getElementById('imsValueChart');

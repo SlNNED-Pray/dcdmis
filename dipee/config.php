@@ -14,4 +14,4 @@ const PAYROLL_USER = 'root';
 const PAYROLL_PASSWORD = '';
 
 // Legacy data can be read (read-only) from here by the importer.
-const LEGACY_PATH = 'C:/Users/Admin/Desktop/MIssion/DIPEE';
+const LEGACY_PATH = 'C:/DIPEE';

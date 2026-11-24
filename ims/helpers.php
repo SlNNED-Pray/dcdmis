@@ -123,10 +123,9 @@ function requireImsStaff(): void
     exit;
 }
 
-function imsItemCategory(string $description, string $stockNo = ''): string
+function imsItemCategoryGroups(): array
 {
-    $haystack = ' ' . strtolower($description . ' ' . $stockNo) . ' ';
-    $groups = [
+    return [
         'ICT Equipment' => ['laptop', 'computer', 'desktop', 'printer', 'scanner', 'monitor', 'keyboard', 'mouse', 'toner', 'cartridge', 'software', 'projector', 'router', 'network', 'hard drive', 'flash drive', 'ups', 'server', 'modem', 'webcam', 'headset', 'tablet', 'photocopier', 'plotter', 'switch'],
         'Medical / First Aid' => ['alcohol', 'bandage', 'gauze', 'medicine', 'thermometer', 'syringe', 'cotton', 'plaster', 'first aid', 'antiseptic', 'betadine'],
         'Janitorial Supplies' => ['broom', 'mop', 'detergent', 'soap', 'cleanser', 'disinfectant', 'air freshener', 'toilet', 'toilet tissue', 'tissue paper', 'paper towel', 'tissue holder', 'garbage', 'trash', 'insecticide', 'wax', 'sponge', 'brush', 'dustpan', 'deodorizer', 'sanitizer', 'bleach', 'floor', 'rags'],
@@ -134,8 +133,13 @@ function imsItemCategory(string $description, string $stockNo = ''): string
         'Electrical / Hardware' => ['fan', 'bulb', 'lamp', 'extension', 'wire', 'battery', 'outlet', 'plug', 'fluorescent', 'led', 'electrical', 'cable'],
         'Furniture' => ['table', 'chair', 'desk', 'cabinet', 'shelf', 'locker', 'bed', 'rack'],
     ];
+}
 
-    foreach ($groups as $category => $keywords) {
+function imsItemCategory(string $description, string $stockNo = ''): string
+{
+    $haystack = ' ' . strtolower($description . ' ' . $stockNo) . ' ';
+
+    foreach (imsItemCategoryGroups() as $category => $keywords) {
         foreach ($keywords as $keyword) {
             if (preg_match('/\b' . preg_quote($keyword, '/') . '(s|es)?\b/', $haystack)) {
                 return $category;

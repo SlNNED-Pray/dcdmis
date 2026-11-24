@@ -88,8 +88,7 @@ input::-ms-reveal {
 }
 
 #calendar.card-body {
-    max-height: 300px !important;
-    overflow-y: scroll;
+    height: auto !important;
 }
 
 .text-orange {
@@ -126,8 +125,6 @@ input::-ms-reveal {
 
     #calendar.card-body {
         height: auto !important;
-        max-height: 400px;
-        overflow-y: scroll;
     }
 
     #calendar-panel.card {
