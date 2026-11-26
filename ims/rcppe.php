@@ -69,9 +69,6 @@ contentTitle('RCPPE');
 imsNav('rcppe');
 ?>
 <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
-	<div>
-		<button class="btn btn-secondary btn-sm" type="button" onclick="window.print()"><i class="fas fa-print"></i> Print</button>
-	</div>
 	<div class="text-muted small">
 		Showing <strong><?= number_format($totalRecords) ?></strong> of <strong><?= number_format(count($allRows)) ?></strong> record(s)
 		<?php if ($locationFilter !== ''): ?> · <?= e($locationFilter) ?><?php endif; ?>
@@ -79,45 +76,6 @@ imsNav('rcppe');
 		<?php if ($search !== ''): ?> · matching “<?= e($search) ?>”<?php endif; ?>
 	</div>
 </div>
-
-<form method="get" class="card shadow mb-4"><?= imsEmbedInput() ?>
-	<input type="hidden" name="v" value="<?= e(cipher('RCPPE')) ?>">
-	<div class="card-body pb-2">
-		<div class="form-row align-items-end">
-			<div class="form-group col-lg-4 mb-2">
-				<label class="small mb-1" for="rcppe-search">Search</label>
-				<div class="input-group input-group-sm">
-					<div class="input-group-prepend"><span class="input-group-text"><i class="fas fa-search"></i></span></div>
-					<input class="form-control" type="search" id="rcppe-search" name="q" value="<?= e($search) ?>" placeholder="Article, description, location, accountable person…">
-				</div>
-			</div>
-			<div class="form-group col-lg-3 mb-2">
-				<label class="small mb-1" for="rcppe-location">Location</label>
-				<select class="form-control form-control-sm" id="rcppe-location" name="location">
-					<option value="">All locations</option>
-					<?php foreach ($locations as $location): ?>
-						<option value="<?= e($location) ?>"<?= $location === $locationFilter ? ' selected' : '' ?>><?= e($location) ?></option>
-					<?php endforeach; ?>
-				</select>
-			</div>
-			<div class="form-group col-lg-3 mb-2">
-				<label class="small mb-1" for="rcppe-person">Accountable Person</label>
-				<select class="form-control form-control-sm" id="rcppe-person" name="person">
-					<option value="">All accountable persons</option>
-					<?php foreach ($persons as $person): ?>
-						<option value="<?= e($person) ?>"<?= $person === $personFilter ? ' selected' : '' ?>><?= e($person) ?></option>
-					<?php endforeach; ?>
-				</select>
-			</div>
-			<div class="form-group col-lg-2 mb-2">
-				<button class="btn btn-primary btn-sm btn-block" type="submit"><i class="fas fa-filter"></i> Apply</button>
-				<?php if ($hasFilter): ?>
-					<a class="btn btn-outline-secondary btn-sm btn-block" href="<?= imsUri('RCPPE') ?>"><i class="fas fa-times"></i> Clear</a>
-				<?php endif; ?>
-			</div>
-		</div>
-	</div>
-</form>
 
 <div class="row">
 	<?php
@@ -143,6 +101,46 @@ imsNav('rcppe');
 		</div>
 	<?php endforeach; ?>
 </div>
+
+<form method="get" class="card shadow mb-4"><?= imsEmbedInput() ?>
+	<input type="hidden" name="v" value="<?= e(cipher('RCPPE')) ?>">
+	<div class="card-body pb-2">
+		<div class="form-row align-items-end flex-nowrap rcppe-filter-row">
+			<div class="form-group col-4 mb-2">
+				<label class="small mb-1 text-nowrap" for="rcppe-search">Search</label>
+				<div class="input-group input-group-sm">
+					<div class="input-group-prepend"><span class="input-group-text"><i class="fas fa-search"></i></span></div>
+					<input class="form-control" type="search" id="rcppe-search" name="q" value="<?= e($search) ?>" placeholder="Article, description, location, accountable person…">
+				</div>
+			</div>
+			<div class="form-group col-3 mb-2">
+				<label class="small mb-1 text-nowrap" for="rcppe-location">Location</label>
+				<select class="form-control form-control-sm" id="rcppe-location" name="location">
+					<option value="">All locations</option>
+					<?php foreach ($locations as $location): ?>
+						<option value="<?= e($location) ?>"<?= $location === $locationFilter ? ' selected' : '' ?>><?= e($location) ?></option>
+					<?php endforeach; ?>
+				</select>
+			</div>
+			<div class="form-group col-3 mb-2">
+				<label class="small mb-1 text-nowrap" for="rcppe-person">Accountable Person</label>
+				<select class="form-control form-control-sm" id="rcppe-person" name="person">
+					<option value="">All accountable persons</option>
+					<?php foreach ($persons as $person): ?>
+						<option value="<?= e($person) ?>"<?= $person === $personFilter ? ' selected' : '' ?>><?= e($person) ?></option>
+					<?php endforeach; ?>
+				</select>
+			</div>
+			<div class="form-group col-2 mb-2">
+				<button class="btn btn-secondary btn-sm btn-block" type="button" onclick="window.print()"><i class="fas fa-print"></i> Print</button>
+				<button class="btn btn-primary btn-sm btn-block" type="submit"><i class="fas fa-filter"></i> Apply</button>
+				<?php if ($hasFilter): ?>
+					<a class="btn btn-outline-secondary btn-sm btn-block" href="<?= imsUri('RCPPE') ?>"><i class="fas fa-times"></i> Clear</a>
+				<?php endif; ?>
+			</div>
+		</div>
+	</div>
+</form>
 
 <div class="card shadow mb-4">
 	<div class="card-header"><strong>Report on the Physical Count of Property, Plant and Equipment</strong></div>
@@ -204,6 +202,12 @@ imsNav('rcppe');
 </div>
 
 <style>
+.rcppe-filter-row { flex-wrap: nowrap; }
+.rcppe-filter-row > .form-group { min-width: 0; }
+.rcppe-filter-row .input-group,
+.rcppe-filter-row .form-control { min-width: 0; width: 100%; }
+.rcppe-filter-row .input-group { flex-wrap: nowrap; }
+.rcppe-filter-row label { overflow: hidden; text-overflow: ellipsis; }
 @media print {
 	.btn, .nav-tabs, .sidebar, #accordionSidebar, #scroll-to-top, .navbar, footer, form, .card.border-left-primary, .card.border-left-success, .card.border-left-info, .card.border-left-danger, .card.border-left-secondary { display: none !important; }
 	#content-wrapper, #content, .container-fluid { margin: 0 !important; padding: 0 !important; width: 100% !important; }

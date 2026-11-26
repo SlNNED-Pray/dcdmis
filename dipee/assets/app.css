@@ -266,6 +266,7 @@ form.inline { display: inline; }
 }
 .payslip-net span { font-size: .8rem; letter-spacing: .12em; color: var(--blue-800); font-weight: 700; }
 .payslip-net strong { font-size: 1.5rem; color: var(--blue-900); }
+.payslip-footer { margin-top: 1rem; }
 .signatures { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.4rem; margin-top: 2.2rem; text-align: center; }
 .signatures .line { display: block; border-top: 1px solid #7d8c99; margin-bottom: .25rem; }
 .signatures small { color: var(--muted); font-size: .76rem; }
@@ -282,7 +283,11 @@ form.inline { display: inline; }
     .print-head { display: block; text-align: center; margin-bottom: .6rem; }
     .table th, .table td { padding: .18rem .25rem; font-size: 8.4px; }
     .table-compact th, .table-compact td { font-size: 8.4px; }
-    .payslip-meta { grid-template-columns: repeat(4, 1fr); }
+    .payslip-meta { grid-template-columns: repeat(4, 1fr); gap: .35rem .8rem; margin: .6rem 0; }
+    .payslip-net { margin-top: .5rem; padding: .45rem .7rem; }
+    .payslip-footer { margin-top: .5rem; break-inside: avoid; page-break-inside: avoid; }
+    .payslip-footer p { margin: .35rem 0; }
+    .signatures { gap: 1rem; margin-top: .8rem; }
     .page-head { margin-bottom: .4rem; }
     .page-head h1 { font-size: 14px; }
     @page { margin: 10mm; }

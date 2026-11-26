@@ -19,6 +19,7 @@ $custodianDesignation = !empty($custodianHead)
 	? (string) (position((int) $custodianHead)['official_title'] ?? 'Administrative Officer IV')
 	: 'Administrative Officer IV';
 
+$rsmiFilter = trim((string) ($_GET['filter'] ?? ''));
 $fromDate = trim((string) ($_GET['from_date'] ?? ''));
 $toDate = trim((string) ($_GET['to_date'] ?? ''));
 $acctStaff = trim((string) ($_GET['acct_staff'] ?? ''));
@@ -42,9 +43,7 @@ $statement = $pdo->query(
 	 ORDER BY issue_date ASC, r.ris_no ASC"
 )->fetchAll();
 
-$rows = [];
-$totalQty = 0;
-$totalAmount = 0.0;
+$allRows = [];
 foreach ($statement as $m) {
 	$issueDay = (string) ($m['issue_date'] ?? '');
 	$issueDay = $issueDay !== '' ? date('Y-m-d', strtotime($issueDay)) : '';
@@ -57,8 +56,7 @@ foreach ($statement as $m) {
 	$unit = trim((string) ($m['ris_unit'] ?: $m['unit']));
 	$qty = (int) $m['quantity'];
 	$cost = (float) ($m['unit_cost'] ?? 0);
-	$amount = $qty * $cost;
-	$rows[] = [
+	$allRows[] = [
 		'ris_no' => $m['ris_no'],
 		'rc_code' => $m['office'] ?: '',
 		'stock_no' => $m['stock_no'],
@@ -66,10 +64,26 @@ foreach ($statement as $m) {
 		'unit' => $unit,
 		'quantity' => $qty,
 		'unit_cost' => $cost,
-		'amount' => $amount,
+		'amount' => $qty * $cost,
 	];
-	$totalQty += $qty;
-	$totalAmount += $amount;
+}
+
+$rows = array_values(array_filter($allRows, static function (array $row) use ($rsmiFilter): bool {
+	if ($rsmiFilter === '') {
+		return true;
+	}
+	return stripos($row['ris_no'], $rsmiFilter) !== false
+		|| stripos($row['rc_code'], $rsmiFilter) !== false
+		|| stripos($row['stock_no'], $rsmiFilter) !== false
+		|| stripos($row['description'], $rsmiFilter) !== false
+		|| stripos($row['stock_no'] . ' - ' . $row['description'], $rsmiFilter) !== false;
+}));
+
+$totalQty = 0;
+$totalAmount = 0.0;
+foreach ($rows as $row) {
+	$totalQty += $row['quantity'];
+	$totalAmount += $row['amount'];
 }
 
 $fromDateDisplay = $fromDate !== '' ? date('F j, Y', strtotime($fromDate)) : '';
@@ -113,9 +127,9 @@ foreach ($rows as $r) {
 $recapRows = array_values($recap);
 
 $dataCount = count($rows);
-$padRows = max(0, 16 - $dataCount);
+$padRows = max(0, 12 - $dataCount);
 $recapCount = count($recapRows);
-$recapPad = max(0, 8 - $recapCount);
+$recapPad = max(0, 5 - $recapCount);
 ?><!DOCTYPE html>
 <html lang="en">
 <head>
@@ -136,6 +150,7 @@ body { font:11pt "Times New Roman", Times, serif; color:#111; background:#f0f0f0
 .header2 { font-family:"Trajan Pro", Arial, sans-serif; text-align:center; font-size:0.3175cm; margin-bottom:1px; }
 .appendix { position:absolute; top:9mm; right:9mm; font-weight:bold; }
 .report-title { text-align:center; font-weight:bold; font-size:16pt; margin:14px 0 10px; letter-spacing:1px; }
+.filter-note { text-align:center; font-size:10.5pt; font-weight:bold; margin:-4px 0 8px; }
 .meta { width:100%; border-collapse:separate; border-spacing:0; margin-top:4px; }
 .meta td { padding:2px 0; vertical-align:bottom; white-space:nowrap; }
 .meta .data { font-weight:bold; }
@@ -182,16 +197,36 @@ body { font:11pt "Times New Roman", Times, serif; color:#111; background:#f0f0f0
 .ac-item .ac-name { display:block; font-weight:bold; font-size:10pt; }
 .doc-table { width:100%; border-collapse:collapse; }
 .doc-table > tbody > tr > td, .doc-table > tfoot > tr > td { padding:0; }
-.print-footer-page { display:none; }
-.print-footer-page img { width:100%; height:auto; display:block; }
-@page { size:A4 portrait; margin:10mm 12mm 16mm; }
+.doc-footer { display:block; width:100%; margin:8px auto 0; text-align:center; }
+.doc-footer img { width:100%; max-width:210mm; height:auto; display:block; margin:0 auto; }
+@page { size:A4 portrait; margin:8mm 10mm 18mm; }
 @media print {
-	body { background:#fff; margin:0; }
+	body { background:#fff; margin:0; font:8pt "Times New Roman", Times, serif; }
 	.toolbar { display:none !important; }
 	.sig-modal { display:none !important; }
-	.sheet { margin:0; width:auto; min-height:0; padding:5mm 6mm; box-shadow:none; }
-	.doc-table > tfoot > tr > td { padding-top:3mm; }
-	.print-footer-page { display:block !important; }
+	.sheet { margin:0; width:auto; min-height:0; padding:0; box-shadow:none; font:8pt "Times New Roman", Times, serif; }
+	.header { font-size:0.26cm; margin-bottom:0; }
+	.header img { height:1.15cm; }
+	.header2 { font-size:0.24cm; margin-bottom:0; }
+	.appendix { top:0; right:0; font-size:8pt; }
+	.report-title { font-size:12pt; margin:3px 0 2px; letter-spacing:0; }
+	.filter-note { font-size:8.5pt; margin:0 0 2px; }
+	.meta { margin-top:2px; }
+	.meta td { padding:1px 0; font-size:7.5pt; }
+	.division-note { margin-top:2px; font-size:7.5pt; }
+	.division-note td { padding:1px 0; }
+	.rsmi-table, .recap-table { font-size:7.5pt; table-layout:fixed; margin-top:3px; }
+	.rsmi-table th, .rsmi-table td, .recap-table th, .recap-table td { padding:1px 3px; }
+	.rsmi-table tr.row { height:9px; }
+	.recap-table tr.recap-blank td { height:9px; }
+	.posted-by { margin:5px 0 1px; font-size:8pt; }
+	.certify { font-size:8pt; }
+	.sig { margin-top:4px; }
+	.sig br { display:none; }
+	.sig-block { padding:0 3px; }
+	.sig-label { font-size:7pt; margin-top:1px; }
+	.doc-footer { margin-top:3px; break-inside:avoid; page-break-inside:avoid; }
+	.doc-footer img { max-width:160mm; }
 }
 </style>
 </head>
@@ -220,6 +255,7 @@ body { font:11pt "Times New Roman", Times, serif; color:#111; background:#f0f0f0
 	</div>
 
 	<div class="report-title">REPORT OF SUPPLIES AND MATERIALS ISSUED</div>
+	<?php if ($rsmiFilter !== ''): ?><div class="filter-note">Filter: <?= e($rsmiFilter) ?></div><?php endif; ?>
 	<?php if ($periodLine !== ''): ?><div style="text-align:center;font-weight:bold;margin:-4px 0 8px;"><?= e($periodLine) ?></div><?php endif; ?>
 
 	<table class="meta">
@@ -243,36 +279,31 @@ body { font:11pt "Times New Roman", Times, serif; color:#111; background:#f0f0f0
 	<table class="rsmi-table">
 		<thead>
 			<tr>
-				<th style="width:11%">RIS No.</th>
-				<th style="width:12%">Responsibility Center Code</th>
-				<th style="width:9%">Stock No.</th>
-				<th style="width:27%">Item</th>
+				<th style="width:13%">RIS No.</th>
+				<th style="width:14%">Stock No.</th>
+				<th style="width:46%">Item</th>
 				<th style="width:7%">Unit</th>
-				<th style="width:8%">Quantity Issued</th>
-				<th style="width:12%">Unit Cost</th>
-				<th style="width:14%">Amount</th>
+				<th style="width:9%">Qty Issued</th>
+				<th style="width:11%">Amount</th>
 			</tr>
 		</thead>
 		<tbody>
 			<?php foreach ($rows as $row): ?>
 				<tr>
 					<td class="num"><?= e($row['ris_no']) ?></td>
-					<td class="num"> </td>
 					<td class="num"><?= e($row['stock_no']) ?></td>
 					<td class="desc"><?= e($row['description']) ?></td>
 					<td class="num"><?= e(ucfirst($row['unit'])) ?></td>
 					<td class="num"><?= (int) $row['quantity'] ?></td>
-					<td class="num"><?= number_format($row['unit_cost'], 2) ?></td>
 					<td class="num"><?= number_format($row['amount'], 2) ?></td>
 				</tr>
 			<?php endforeach; ?>
 			<?php for ($i = 0; $i < $padRows; $i++): ?>
-				<tr class="row"><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td class="desc">&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+				<tr class="row"><td>&nbsp;</td><td>&nbsp;</td><td class="desc">&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>
 			<?php endfor; ?>
 			<tr class="total">
-				<td colspan="5">TOTAL</td>
+				<td colspan="4">TOTAL</td>
 				<td class="num"><?= (int) $totalQty ?></td>
-				<td></td>
 				<td class="num"><?= number_format($totalAmount, 2) ?></td>
 			</tr>
 		</tbody>
@@ -281,26 +312,23 @@ body { font:11pt "Times New Roman", Times, serif; color:#111; background:#f0f0f0
 	<table class="recap-table">
 		<tr>
 			<td colspan="4" style="font-weight:bold;">Recapitulation:</td>
-			<td colspan="4" style="font-weight:bold;">Recapitulation:</td>
 		</tr>
 		<tr>
-			<th colspan="2">Stock No.</th>
-			<th colspan="2">Quantity</th>
-			<th colspan="2">Unit Cost</th>
-			<th colspan="1">Total Cost</th>
-			<th colspan="1">UACS Object Code</th>
+			<th style="width:35%">Stock No.</th>
+			<th style="width:15%">Quantity</th>
+			<th style="width:25%">Unit Cost</th>
+			<th style="width:25%">Total Cost</th>
 		</tr>
 		<?php foreach ($recapRows as $rc): ?>
 			<tr>
-				<td colspan="2" style="text-align:center;"><?= e($rc['stock_no']) ?></td>
-				<td colspan="2" style="text-align:center;"><?= (int) $rc['qty'] ?></td>
-				<td colspan="2" style="text-align:center;"><?= number_format($rc['cost'], 2) ?></td>
-				<td colspan="1" style="text-align:center;"><?= number_format($rc['total'], 2) ?></td>
-				<td colspan="1">&nbsp;</td>
+				<td style="text-align:center;"><?= e($rc['stock_no']) ?></td>
+				<td class="num"><?= (int) $rc['qty'] ?></td>
+				<td class="num"><?= number_format($rc['cost'], 2) ?></td>
+				<td class="num"><?= number_format($rc['total'], 2) ?></td>
 			</tr>
 		<?php endforeach; ?>
 		<?php for ($i = 0; $i < $recapPad; $i++): ?>
-			<tr class="recap-blank"><td colspan="8">&nbsp;</td></tr>
+			<tr class="recap-blank"><td colspan="4">&nbsp;</td></tr>
 		<?php endfor; ?>
 	</table>
 
@@ -327,7 +355,7 @@ body { font:11pt "Times New Roman", Times, serif; color:#111; background:#f0f0f0
 	</div>
 </div>
 </td></tr></tbody>
-<tfoot><tr><td><div class="print-footer-page"><img src="image/footer.png" alt="Footer Image"></div></td></tr></tfoot>
+<tfoot><tr><td><div class="doc-footer"><img src="image/footer.png" alt="Footer Image"></div></td></tr></tfoot>
 </table>
 
 <?php if ($showForm): ?>
@@ -336,6 +364,7 @@ body { font:11pt "Times New Roman", Times, serif; color:#111; background:#f0f0f0
 		<h3>Report of Supplies and Materials Issued</h3>
 		<div class="ics-modal-sub">Set the transaction period and designated accounting staff before printing.</div>
 		<form method="get" action="">
+			<input type="hidden" name="filter" value="<?= htmlspecialchars($rsmiFilter, ENT_QUOTES, 'UTF-8') ?>">
 			<div class="fld"><label>From Date</label><input type="date" name="from_date" value="<?= e($fromDate) ?>"></div>
 			<div class="fld"><label>To Date</label><input type="date" name="to_date" value="<?= e($toDate) ?>"></div>
 			<hr style="border:none;border-top:1px solid #ccc;">

@@ -45,7 +45,8 @@ $rows = array_values(array_filter($rows, static function (array $row) use ($rsmi
 	return stripos($row['ris_no'], $rsmiFilter) !== false
 		|| stripos($row['rc_code'], $rsmiFilter) !== false
 		|| stripos($row['stock_no'], $rsmiFilter) !== false
-		|| stripos($row['description'], $rsmiFilter) !== false;
+		|| stripos($row['description'], $rsmiFilter) !== false
+		|| stripos($row['stock_no'] . ' - ' . $row['description'], $rsmiFilter) !== false;
 }));
 
 $filterOptions = array_values(array_unique(array_merge(
@@ -56,6 +57,15 @@ $filterOptions = array_values(array_unique(array_merge(
 
 $filteredTotalAmount = array_sum(array_column($rows, 'amount'));
 $filteredTotalQty = array_sum(array_column($rows, 'quantity'));
+$rsmiPrintUrl = uri() . '/ims/rsmi-print.php';
+if ($rsmiFilter !== '') {
+	$rsmiPrintUrl .= '?filter=' . urlencode($rsmiFilter);
+}
+$rsmiPrintUrlJson = htmlspecialchars(
+	json_encode($rsmiPrintUrl, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT),
+	ENT_QUOTES,
+	'UTF-8'
+);
 ?>
 <div class="d-flex justify-content-between align-items-center mb-3 rsmi-toolbar">
 	<form method="get" class="form-inline"><?= imsEmbedInput() ?>
@@ -68,7 +78,7 @@ $filteredTotalQty = array_sum(array_column($rows, 'quantity'));
 		<button class="btn btn-primary" type="submit"><i class="fas fa-filter"></i> Filter</button>
 		<a class="btn btn-outline-secondary ml-2" href="<?= imsUri('Report of Supplies and Materials Issued') ?>">Clear</a>
 	</form>
-	<button class="btn btn-secondary" type="button" onclick="window.open('<?= uri() . '/ims/rsmi-print.php' ?>', '_blank', 'resizable=1,scrollbars=1')"><i class="fas fa-print"></i> Print</button>
+	<button class="btn btn-secondary" type="button" onclick="window.open(<?= $rsmiPrintUrlJson ?>, '_blank', 'resizable=1,scrollbars=1')"><i class="fas fa-print"></i> Print</button>
 </div>
 
 <div class="card shadow mb-4">

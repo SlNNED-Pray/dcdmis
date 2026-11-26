@@ -112,11 +112,13 @@ $earnings = [
         </p>
     <?php endif; ?>
 
-    <p class="muted small"><?= e(getSetting('payslip_note')) ?></p>
+    <footer class="payslip-footer">
+        <p class="muted small"><?= e(getSetting('payslip_note')) ?></p>
 
-    <div class="signatures">
-        <div><span class="line"></span><small>Prepared by</small></div>
-        <div><span class="line"></span><small>Certified correct</small></div>
-        <div><span class="line"></span><small>Received by</small></div>
-    </div>
+        <div class="signatures">
+            <div><span class="line"></span><small>Prepared by</small></div>
+            <div><span class="line"></span><small>Certified correct</small></div>
+            <div><span class="line"></span><small>Received by</small></div>
+        </div>
+    </footer>
 </section>
