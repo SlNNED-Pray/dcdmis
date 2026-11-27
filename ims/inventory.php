@@ -258,9 +258,19 @@ imsNav('inventory');
                 </div>
             <?php endif; ?>
         </form>
-        <div class="table-responsive">
-            <table class="table table-hover" id="ims-items-table">
-                <thead><tr><th>Stock No.</th><th>Description</th><th>Group</th><th>Unit</th><th>Total Units</th><?php if ($dateMode === 'as_of'): ?><th>On Hand as of <?= e($asOfLabel) ?></th><?php elseif ($dateMode === 'range'): ?><th>Qty moved (<?= e($rangeLabel) ?>)</th><?php endif; ?><th>Minimum</th><th>Status</th><th>Remarks</th><th>Action</th></tr></thead>
+        <?php
+        $inventoryColWidths = $dateMode !== ''
+            ? [9, 21, 10, 5, 7, 8, 6, 8, 11, 15]
+            : [10, 24, 11, 6, 8, 7, 9, 12, 13];
+        ?>
+        <div class="table-responsive inventory-table-responsive">
+            <table class="table table-hover inventory-table" id="ims-items-table">
+                <colgroup>
+                    <?php foreach ($inventoryColWidths as $inventoryColWidth): ?>
+                        <col style="width:<?= (int) $inventoryColWidth ?>%">
+                    <?php endforeach; ?>
+                </colgroup>
+                <thead><tr><th>Stock No.</th><th>Description</th><th>Group</th><th>Unit</th><th>Total</th><?php if ($dateMode === 'as_of'): ?><th>On Hand as of <?= e($asOfLabel) ?></th><?php elseif ($dateMode === 'range'): ?><th>Qty moved (<?= e($rangeLabel) ?>)</th><?php endif; ?><th>Minimum</th><th>Status</th><th>Remarks</th><th>Action</th></tr></thead>
                 <tbody>
                 <?php if (!$items): ?>
                     <tr><td colspan="<?= $dateMode !== '' ? 10 : 9 ?>" class="text-center text-muted my-3">No items match the selected filter.</td></tr>
@@ -302,6 +312,14 @@ imsNav('inventory');
         </div>
     </div>
 </div>
+<style>
+.inventory-table-responsive { overflow: visible !important; }
+.inventory-table { width: 100%; table-layout: fixed; }
+.inventory-table th, .inventory-table td { vertical-align: top; overflow-wrap: anywhere; word-break: break-word; }
+.inventory-table th { white-space: normal; }
+.inventory-table .badge { display: inline-block; max-width: 100%; white-space: normal; }
+.inventory-table .btn { white-space: normal; }
+</style>
 
 <?php require_once(__DIR__ . '/item-create.php'); ?>
 <?php require_once(__DIR__ . '/ris-create.php'); ?>

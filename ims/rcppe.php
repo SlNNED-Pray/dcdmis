@@ -148,8 +148,20 @@ imsNav('rcppe');
 		<?php if (!$rows): ?>
 			<p class="text-center text-muted my-4 mb-0">No records match the selected filters.</p>
 		<?php else: ?>
-		<div class="table-responsive">
-			<table class="table table-sm table-hover table-bordered" id="rcppe-table">
+		<div class="table-responsive rcppe-table-responsive">
+			<table class="table table-sm table-hover table-bordered rcppe-table" id="rcppe-table">
+				<colgroup>
+					<col style="width:7%">
+					<col style="width:18%">
+					<col style="width:11%">
+					<col style="width:5%">
+					<col style="width:9%">
+					<col style="width:9%">
+					<col style="width:9%">
+					<col style="width:8%">
+					<col style="width:11%">
+					<col style="width:22%">
+				</colgroup>
 				<thead class="thead-light">
 					<tr>
 						<th>Article</th>
@@ -208,6 +220,9 @@ imsNav('rcppe');
 .rcppe-filter-row .form-control { min-width: 0; width: 100%; }
 .rcppe-filter-row .input-group { flex-wrap: nowrap; }
 .rcppe-filter-row label { overflow: hidden; text-overflow: ellipsis; }
+.rcppe-table-responsive { overflow: visible !important; }
+.rcppe-table { width: 100%; table-layout: fixed; }
+.rcppe-table th, .rcppe-table td { white-space: normal !important; vertical-align: top; overflow-wrap: anywhere; word-break: break-word; }
 @media print {
 	.btn, .nav-tabs, .sidebar, #accordionSidebar, #scroll-to-top, .navbar, footer, form, .card.border-left-primary, .card.border-left-success, .card.border-left-info, .card.border-left-danger, .card.border-left-secondary { display: none !important; }
 	#content-wrapper, #content, .container-fluid { margin: 0 !important; padding: 0 !important; width: 100% !important; }

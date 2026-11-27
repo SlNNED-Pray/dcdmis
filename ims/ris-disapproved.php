@@ -35,7 +35,15 @@ imsNav('ris-disapproved');
 ?>
 <div class="card shadow mb-4">
     <div class="card-header"><strong>Disapproved requisition slips</strong></div>
-    <div class="card-body"><div class="table-responsive"><table class="table table-hover"><thead><tr><th>RIS No.</th><th>Employee</th><th>Item(s)</th><th>Purpose</th><th>Date</th></tr></thead><tbody>
+    <div class="card-body"><div class="table-responsive ris-disapproved-table-responsive"><table class="table table-hover ris-disapproved-table">
+        <colgroup>
+            <col style="width:14%">
+            <col style="width:15%">
+            <col style="width:41%">
+            <col style="width:20%">
+            <col style="width:10%">
+        </colgroup>
+        <thead class="thead-light ris-disapproved-table-head"><tr><th>RIS No.</th><th>Employee</th><th>Item(s)</th><th>Purpose</th><th>Date</th></tr></thead><tbody>
     <?php if (empty($grouped)): ?><tr><td colspan="5" class="text-center text-muted">No disapproved requisition slips.</td></tr><?php endif; ?>
     <?php foreach ($grouped as $ris): ?><tr>
         <td><?= e($ris['ris_no']) ?></td>
@@ -58,3 +66,23 @@ imsNav('ris-disapproved');
         <td><?= e($ris['created_at']) ?></td>
     </tr><?php endforeach; ?></tbody></table></div></div>
 </div>
+<style>
+#content-wrapper { overflow-x: visible !important; }
+.ris-disapproved-table-responsive { overflow: visible !important; }
+.ris-disapproved-table { width: 100%; table-layout: fixed; border-collapse: separate; border-spacing: 0; }
+.ris-disapproved-table th, .ris-disapproved-table td { vertical-align: top; overflow-wrap: anywhere; word-break: break-word; }
+.ris-disapproved-table .badge { display: inline-block; max-width: 100%; white-space: normal; text-align: left; }
+.ris-disapproved-table > .ris-disapproved-table-head > tr > th {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: #f8f9fc;
+    border-bottom: 2px solid #e74a3b;
+    white-space: nowrap;
+    vertical-align: middle;
+    text-align: center;
+    text-transform: uppercase;
+    font-size: .8rem;
+    letter-spacing: .03em;
+}
+</style>

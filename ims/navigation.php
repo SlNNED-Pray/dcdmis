@@ -1,6 +1,31 @@
 <?php
 require_once(__DIR__ . '/helpers.php');
 
+// Shared sticky-header treatment for IMS list tables. Print endpoints do not
+// load this file, so their paper layouts are unaffected.
+?>
+<style>
+#content-wrapper { overflow-x: visible !important; }
+.card-body > .table-responsive { overflow: visible !important; }
+.card-body table.table > thead {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+.card-body table.table > thead > tr > th {
+    background: #f8f9fc;
+    border-bottom: 2px solid #4e73df;
+    white-space: nowrap;
+    vertical-align: middle;
+    text-align: center;
+    text-transform: uppercase;
+    font-size: .8rem;
+    letter-spacing: .03em;
+}
+.card-body table.table > thead > tr > th.text-right { text-align: right; }
+</style>
+<?php
+
 function imsNav(string $active): void
 {
     ?>

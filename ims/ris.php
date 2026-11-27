@@ -195,7 +195,17 @@ imsNav('ris');
                 </div>
             <?php endif; ?>
         </form>
-        <div class="table-responsive"><table class="table table-hover"><thead><tr><th>RIS No.</th><th>Employee</th><th>Office</th><th>Division</th><th>Item(s)</th><th>Action</th><th>Date</th></tr></thead><tbody>
+        <div class="table-responsive ris-table-responsive"><table class="table table-hover ris-table">
+            <colgroup>
+                <col style="width:10%">
+                <col style="width:11%">
+                <col style="width:10%">
+                <col style="width:10%">
+                <col style="width:37%">
+                <col style="width:14%">
+                <col style="width:8%">
+            </colgroup>
+            <thead class="thead-light ris-table-head"><tr><th>RIS No.</th><th>Employee</th><th>Office</th><th>Division</th><th>Item(s)</th><th>Action</th><th>Date</th></tr></thead><tbody>
     <?php if (empty($grouped)): ?><tr><td colspan="7" class="text-center text-muted my-3"><?= $hasRisFilter ? 'No requisition slips match the selected filter.' : 'No requisition slips found.' ?></td></tr><?php endif; ?>
     <?php foreach ($grouped as $ris): ?><tr>
         <td><?= e($ris['ris_no']) ?><?php if ($canManage): ?> <a class="btn btn-outline-secondary btn-sm ml-1" title="Print RIS" target="_blank" href="<?= uri() . '/ims/ris-print.php?id=' . encode((string) $ris['ris_id']) ?>"><i class="fas fa-print"></i></a><?php endif; ?></td>
@@ -248,6 +258,26 @@ imsNav('ris');
         <td><?= e($ris['created_at']) ?></td>
     </tr><?php endforeach; ?></tbody></table></div></div>
 </div>
+<style>
+#content-wrapper { overflow-x: visible !important; }
+.ris-table-responsive { overflow: visible !important; }
+.ris-table { width: 100%; table-layout: fixed; border-collapse: separate; border-spacing: 0; }
+.ris-table th, .ris-table td { vertical-align: top; overflow-wrap: anywhere; word-break: break-word; }
+.ris-table .badge { display: inline-block; max-width: 100%; white-space: normal; text-align: left; }
+.ris-table > .ris-table-head > tr > th {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: #f8f9fc;
+    border-bottom: 2px solid #4e73df;
+    white-space: nowrap;
+    vertical-align: middle;
+    text-align: center;
+    text-transform: uppercase;
+    font-size: .8rem;
+    letter-spacing: .03em;
+}
+</style>
 <script>
 (function () {
     var filters = ['ris-filter-number', 'ris-filter-item', 'ris-filter-employee'];
